@@ -1,0 +1,102 @@
+/* Buttons inherit theme variables from document root */
+.btn {
+  background: transparent;
+  border: 2px solid var(--border-color);
+  color: var(--text-color);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 1.1rem;
+  font-weight: 500;
+  padding: 15px 30px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  position: relative;
+  min-width: 120px;
+  display: inline-block;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.btn:hover {
+  background: var(--text-color);
+  color: var(--bg-color);
+  border-color: var(--text-color);
+}
+
+.btn:active {
+  transform: translate(2px, 2px);
+}
+
+/* Variant Styles */
+.btn-primary {
+  border-width: 3px;
+}
+
+.btn-secondary {
+  border-width: 2px;
+}
+
+.btn-icon {
+  padding: 10px;
+  min-width: auto;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.btn-small {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  min-width: 80px;
+}
+
+/* Border Style Modifiers */
+.btn-border-solid {
+  border-style: solid;
+}
+
+.btn-border-dashed {
+  border-style: dashed;
+}
+
+.btn-border-dotted {
+  border-style: dotted;
+}
+
+.btn-border-double {
+  border-style: double;
+  border-width: 4px;
+}
+
+.btn-border-groove {
+  border-style: groove;
+  border-width: 3px;
+}
+
+.btn-border-ridge {
+  border-style: ridge;
+  border-width: 3px;
+}
+
+.btn-border-inset {
+  border-style: inset;
+  border-width: 3px;
+}
+
+.btn-border-outset {
+  border-style: outset;
+  border-width: 3px;
+}
+
+/* Override */
+.btn-primary.btn-border-double {
+  border-width: 5px;
+}
+
+.btn-primary.btn-border-groove,
+.btn-primary.btn-border-ridge,
+.btn-primary.btn-border-inset,
+.btn-primary.btn-border-outset {
+  border-width: 4px;
+} 

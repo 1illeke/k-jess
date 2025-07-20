@@ -1,0 +1,135 @@
+/* Import theme variables at the root level */
+:root {
+  font-family: 'JetBrains Mono', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* Light theme colors */
+  --bg-color-light: #ffffff;
+  --text-color-light: #000000;
+  --border-color-light: #000000;
+  --secondary-text-light: #666666;
+  --accent-bg-light: #f9f9f9;
+  --accent-border-light: #cccccc;
+  
+  /* Dark theme colors */
+  --bg-color-dark: #1a1a1a;
+  --text-color-dark: #ffffff;
+  --border-color-dark: #ffffff;
+  --secondary-text-dark: #cccccc;
+  --accent-bg-dark: #2a2a2a;
+  --accent-border-dark: #555555;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Default to dark theme */
+:root {
+  --bg-color: var(--bg-color-dark);
+  --text-color: var(--text-color-dark);
+  --border-color: var(--border-color-dark);
+  --secondary-text: var(--secondary-text-dark);
+  --accent-bg: var(--accent-bg-dark);
+  --accent-border: var(--accent-border-dark);
+}
+
+[data-theme="dark"] {
+  --bg-color: var(--bg-color-dark);
+  --text-color: var(--text-color-dark);
+  --border-color: var(--border-color-dark);
+  --secondary-text: var(--secondary-text-dark);
+  --accent-bg: var(--accent-bg-dark);
+  --accent-border: var(--accent-border-dark);
+}
+
+[data-theme="light"] {
+  --bg-color: var(--bg-color-light);
+  --text-color: var(--text-color-light);
+  --border-color: var(--border-color-light);
+  --secondary-text: var(--secondary-text-light);
+  --accent-bg: var(--accent-bg-light);
+  --accent-border: var(--accent-border-light);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  overflow: hidden;
+}
+
+/* Hide scrollbars globally */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none;
+}
+
+html, body {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  height: 100vh;
+  background: var(--bg-color);
+  color: var(--text-color);
+  overflow: hidden;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+a {
+  font-weight: 500;
+  color: var(--text-color);
+  text-decoration: inherit;
+}
+
+a:hover {
+  color: var(--secondary-text);
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
