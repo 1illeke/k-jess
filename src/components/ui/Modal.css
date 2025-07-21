@@ -22,7 +22,7 @@
 .modal-content {
   background: var(--bg-color);
   border: 2px solid var(--border-color);
-  max-width: 500px;
+  max-width: 900px;
   width: 100%;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   position: relative;

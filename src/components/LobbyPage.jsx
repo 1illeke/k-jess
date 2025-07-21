@@ -7,9 +7,8 @@ function LobbyPage() {
   const navigate = useNavigate()
   const { gameId } = useParams() // For future multiplayer lobby IDs like /lobby/12345
   const [playerName, setPlayerName] = useState('Player1')
-  const [isPrivateGame, setIsPrivateGame] = useState(false)
   const [gameMode, setGameMode] = useState('1v1')
-  const [fillWithBots, setFillWithBots] = useState(false)
+  const [randomColors, setRandomColors] = useState(false)
   const [inviteCode, setInviteCode] = useState(null)
   const [showLobby, setShowLobby] = useState(false)
   
@@ -116,18 +115,6 @@ function LobbyPage() {
             <h3 className="section-title">Settings</h3>
             <div className="settings-content">
               <div className="setting-item">
-                <label className="setting-label">
-                  <input
-                    type="checkbox"
-                    checked={isPrivateGame}
-                    onChange={(e) => setIsPrivateGame(e.target.checked)}
-                    className="setting-checkbox"
-                  />
-                  Private Game
-                </label>
-              </div>
-
-              <div className="setting-item">
                 <label className="setting-label">Game Mode:</label>
                 <select
                   value={gameMode}
@@ -144,11 +131,11 @@ function LobbyPage() {
                 <label className="setting-label">
                   <input
                     type="checkbox"
-                    checked={fillWithBots}
-                    onChange={(e) => setFillWithBots(e.target.checked)}
+                    checked={randomColors}
+                    onChange={(e) => setRandomColors(e.target.checked)}
                     className="setting-checkbox"
                   />
-                  Fill with Bots
+                  Random colors
                 </label>
               </div>
             </div>
