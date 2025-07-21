@@ -1,183 +1,264 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Button, ThemeToggle } from './ui'
+import { useState, useEffect } from 'react'
+import { useLocation, useParams } from 'react-router-dom'
+import { Button, ThemeToggle, TwoPlayerBoard, ThreePlayerBoard, FourPlayerBoard } from './ui'
 import './GamePage.css'
 
 function GamePage() {
-  const [playerName, setPlayerName] = useState('Player1')
-  const [isPrivateGame, setIsPrivateGame] = useState(false)
-  const [gameMode, setGameMode] = useState('1v1')
-  const [fillWithBots, setFillWithBots] = useState(false)
-  const [inviteCode, setInviteCode] = useState(null)
+  const location = useLocation()
+  const { gameId } = useParams() // Game ids tulevad siia
+  const { gameMode = '1v1', playerName = 'Player1' } = location.state || {}
   
-  // Fake players just like my CS games
-  const [lobbyPlayers] = useState([
-    { id: 1, name: 'Player1', isHost: true },
-    { id: 2, name: 'ChessM4ster', isHost: false },
-    { id: 3, name: 'Bot_Alice', isBot: true }
+  const [gameTime, setGameTime] = useState(0) // hetkel visual lihtsalt
+  const [isPaused, setIsPaused] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [modalType, setModalType] = useState('')
+  const [pausedBy, setPausedBy] = useState('')
+  const [chatMessages, setChatMessages] = useState([ // Fake chat moment
+    { id: 1, player: 'Player1', message: 'Good luck!' },
+    { id: 2, player: 'Player2', message: 'You too!' }
   ])
-
-  const handleStartGame = () => {
-    alert('Starting game...')
-  }
-
-  const handleInviteFriends = async () => {
-    if (!inviteCode) {
-      // Static inv code for now
-      const code = 'KJ001'
-      setInviteCode(code)
-      
-      // fake link aga ma teen selle ilmselt actual lingiks, peame lih ära tegema selle
-      const inviteLink = `www.kjess.lilleke.eu/invite/${code}`
-      
-      try {
-        // Copy to clipboard
-        await navigator.clipboard.writeText(inviteLink)
-        alert(`Invite link copied to clipboard!\n${inviteLink}`)
-      } catch (err) {
-        // Fallback since "ThEy HaVe A sPeCiAl BrOwSeR"
-        console.error('Failed to copy to clipboard:', err)
-        alert(`Invite code generated: ${code}\nLink: ${inviteLink}`)
-      }
-    } else {
-      // If code already exists, copy the link again
-      const inviteLink = `www.kjess.lilleke.eu/invite/${inviteCode}`
-      try {
-        await navigator.clipboard.writeText(inviteLink)
-        alert(`Invite link copied to clipboard!\n${inviteLink}`)
-      } catch (err) {
-        alert(`Invite link: ${inviteLink}`)
-      }
+  const [newMessage, setNewMessage] = useState('')
+  const [chatMessagesRef, setChatMessagesRef] = useState(null)
+  
+  // Get that game mode
+  const getPlayerCount = () => {
+    switch(gameMode) {
+      case '1v1': return 2
+      case '1v1v1': return 3
+      case '1v1v1v1': return 4
+      default: return 2
     }
   }
+
+  const [players] = useState(() => {
+    const playerCount = getPlayerCount()
+    return Array.from({ length: playerCount }, (_, i) => ({
+      id: i + 1,
+      name: i === 0 ? playerName : `Player${i + 1}`,
+      score: 1
+    }))
+  })
+
+  // Show that game mode
+  const renderBoard = () => {
+    switch(gameMode) {
+      case '1v1':
+        return <TwoPlayerBoard />
+      case '1v1v1':
+        return <ThreePlayerBoard />
+      case '1v1v1v1':
+        return <FourPlayerBoard />
+      default:
+        return <TwoPlayerBoard />
+    }
+  }
+
+  // Timer 
+  useEffect(() => {
+    let interval = null
+    if (!isPaused) {
+      interval = setInterval(() => {
+        setGameTime(time => time + 1)
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [isPaused])
+
+    // Timer shit
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+      }
+
+  // Auto-scroll
+  useEffect(() => {
+    if (chatMessagesRef) {
+      chatMessagesRef.scrollTop = chatMessagesRef.scrollHeight
+    }
+  }, [chatMessages, chatMessagesRef])
+
+  const handlePause = () => {
+    if (!isPaused) {
+      // Pause the game and show modal
+      setIsPaused(true)
+      setPausedBy(playerName) // Who paused
+      setModalType('pause')
+      setShowModal(true)
+      
+      // Add pause message to chat
+      const pauseMessage = {
+        id: Date.now(),
+        player: 'System',
+        message: `${playerName} paused the game`
+      }
+      setChatMessages(prev => [...prev, pauseMessage])
+    }
+  }
+
+  const handleResume = () => {
+    setIsPaused(false)
+    setShowModal(false)
+    setModalType('')
+    
+    // Add resume message to chat
+    const resumeMessage = {
+      id: Date.now(),
+      player: 'System',
+      message: `Game resumed`
+    }
+    setChatMessages(prev => [...prev, resumeMessage])
+  }
+
+  const handleQuit = () => {
+    setModalType('quit')
+    setShowModal(true)
+  }
+
+  const handleConfirmQuit = () => {
+    // Add quit message to chat
+    const quitMessage = {
+      id: Date.now(),
+      player: 'System',
+      message: `${playerName} left the game`
+    }
+    setChatMessages(prev => [...prev, quitMessage])
+    
+    setTimeout(() => {
+      window.history.back()
+    }, 500)
+  }
+
+  const handleCloseModal = () => {
+    setShowModal(false)
+    setModalType('')
+  }
+
+  const handleSendMessage = (e) => {
+    e.preventDefault()
+    if (newMessage.trim()) {
+      const message = {
+        id: Date.now(),
+        player: 'Player1',
+        message: newMessage.trim()
+      }
+      setChatMessages([...chatMessages, message])
+      setNewMessage('')
+    }
+  }
+
+
 
   return (
     <div className="game-page">
       <ThemeToggle />
       
       <div className="game-container">
-        {/* Header */}
-        <header className="game-header">
-          <div className="player-name-section">
-            <label htmlFor="playerName" className="name-label">Your Name:</label>
-            <input
-              id="playerName"
-              type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              className="name-input"
-              maxLength={20}
-            />
+        {/* Left Column - Players and Chat */}
+        <aside className="players-chat-section">
+          {/* Players */}
+          <div className="players-section">
+            {players.map((player) => (
+              <div key={player.id} className="player-info">
+                <div className="player-name">{player.name}</div>
+                <div className="player-score">Score: {player.score.toString().padStart(4, '0')}</div>
+              </div>
+            ))}
           </div>
-          <Button 
-            to="/" 
-            variant="secondary" 
-            borderStyle="solid"
-            className="back-button"
-          >
-            ← Back to Home
-          </Button>
-        </header>
 
-        {/* Main content area */}
-        <main className="game-main">
-          {/* Left side - Buttons */}
-          <section className="game-actions">
-            <h3 className="section-title">Game</h3>
-            <div className="action-buttons">
-              <Button 
-                variant="primary" 
-                borderStyle="solid"
-                onClick={handleStartGame}
-                className="action-btn"
-              >
-                [ Start Game ]
-              </Button>
-              <Button 
-                variant="secondary" 
-                borderStyle="dashed"
-                onClick={handleInviteFriends}
-                className="action-btn"
-                title={inviteCode ? "Click to copy invite link again" : "Generate invite code"}
-              >
-                {inviteCode ? `[ ${inviteCode} ]` : '[ Invite Friends ]'}
-              </Button>
+          {/* Chat */}
+          <div className="chat-section">
+            <div 
+              className="chat-messages"
+              ref={(el) => setChatMessagesRef(el)}
+            >
+              {chatMessages.map((msg) => (
+                <div key={msg.id} className="chat-message">
+                  <span className="chat-player">{msg.player}:</span>
+                  <span className="chat-text">{msg.message}</span>
+                </div>
+              ))}
             </div>
-          </section>
+            <form onSubmit={handleSendMessage} className="chat-input-form">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type message..."
+                className="chat-input"
+                maxLength={100}
+              />
+            </form>
+          </div>
+        </aside>
 
-          {/* Right side - Game settings */}
-          <section className="game-settings">
-            <h3 className="section-title">Settings</h3>
-            <div className="settings-content">
-              <div className="setting-item">
-                <label className="setting-label">
-                  <input
-                    type="checkbox"
-                    checked={isPrivateGame}
-                    onChange={(e) => setIsPrivateGame(e.target.checked)}
-                    className="setting-checkbox"
-                  />
-                  Private Game
-                </label>
-              </div>
-
-              <div className="setting-item">
-                <label className="setting-label">Game Mode:</label>
-                <select
-                  value={gameMode}
-                  onChange={(e) => setGameMode(e.target.value)}
-                  className="setting-select"
-                >
-                  <option value="1v1">2 players</option>
-                  <option value="1v1v1">3 players</option>
-                  <option value="1v1v1v1">4 players</option>
-                </select>
-              </div>
-
-              <div className="setting-item">
-                <label className="setting-label">
-                  <input
-                    type="checkbox"
-                    checked={fillWithBots}
-                    onChange={(e) => setFillWithBots(e.target.checked)}
-                    className="setting-checkbox"
-                  />
-                  Fill with Bots
-                </label>
-              </div>
-            </div>
-          </section>
+        {/* Center Column - Game Board */}
+        <main className="chess-section">
+          {renderBoard()}
         </main>
 
-        {/* Lobby display */}
-        <section className="lobby-section">
-          <h3 className="section-title">Lobby ({lobbyPlayers.length}/4)</h3>
-          <div className="lobby-content">
-            <div className="lobby-players">
-              {lobbyPlayers.map((player) => (
-                <div key={player.id} className="lobby-player">
-                  <span className="player-name">
-                    {player.name}
-                    {player.isHost && <span className="host-badge">[HOST]</span>}
-                    {player.isBot && <span className="bot-badge">[BOT]</span>}
-                  </span>
-                  <div className="player-status">Ready</div>
-                </div>
-              ))}
-              
-              {/* Empty slots */}
-              {Array.from({ length: 4 - lobbyPlayers.length }).map((_, index) => (
-                <div key={`empty-${index}`} className="lobby-player empty">
-                  <span className="player-name">Waiting for player...</span>
-                  <div className="player-status">Empty</div>
-                </div>
-              ))}
+        {/* Right Column - Timer and Controls */}
+        <aside className="controls-section">
+          <div className="timer-section">
+            <div className="timer-display">{formatTime(gameTime)}</div>
+          </div>
+          
+          <div className="game-controls">
+            <Button
+              variant="secondary"
+              borderStyle="solid"
+              onClick={handlePause}
+              className="control-btn"
+              disabled={isPaused}
+            >
+              [ {isPaused ? 'Game Paused' : 'Pause'} ]
+            </Button>
+            
+            <Button
+              variant="secondary"
+              borderStyle="solid"
+              onClick={handleQuit}
+              className="control-btn"
+            >
+              [ Quit ]
+            </Button>
+          </div>
+                  </aside>
+        </div>
+
+        {/* Game Modal */}
+        {showModal && (
+          <div className="pause-overlay">
+            <div className="pause-modal-content">
+              <h2 className="pause-title">
+                {modalType === 'pause' 
+                  ? `${pausedBy} paused the game`
+                  : 'Do you want to quit?'
+                }
+              </h2>
+              <div className="pause-buttons">
+                <Button
+                  variant="primary"
+                  borderStyle="solid"
+                  onClick={modalType === 'pause' ? handleResume : handleCloseModal}
+                  className="pause-btn"
+                >
+                  [ Resume ]
+                </Button>
+                <Button
+                  variant="secondary"
+                  borderStyle="solid"
+                  onClick={modalType === 'pause' ? handleQuit : handleConfirmQuit}
+                  className="pause-btn"
+                >
+                  [ Quit ]
+                </Button>
+              </div>
             </div>
           </div>
-        </section>
+        )}
       </div>
-    </div>
-  )
-}
+    )
+  }
 
 export default GamePage 

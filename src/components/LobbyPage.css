@@ -1,0 +1,336 @@
+.lobby-page {
+  min-height: 100vh;
+  height: 100vh;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  padding: 20px;
+  position: relative;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow: hidden;
+}
+
+.lobby-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Header */
+.lobby-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border: 2px solid var(--border-color);
+  background: var(--bg-color);
+  position: relative;
+}
+
+.lobby-header::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid var(--accent-border);
+  pointer-events: none;
+}
+
+.player-name-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.name-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.name-input {
+  background: transparent;
+  border: 2px solid var(--border-color);
+  color: var(--text-color);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 1rem;
+  padding: 8px 12px;
+  min-width: 200px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.name-input:focus {
+  outline: none;
+  background: var(--accent-bg);
+}
+
+.back-button {
+  flex-shrink: 0;
+}
+
+/* Main content */
+.lobby-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  height: 50vh; 
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+/* Action buttons section */
+.game-actions {
+  border: 2px solid var(--border-color);
+  padding: 25px;
+  background: var(--bg-color);
+  position: relative;
+}
+
+.game-actions::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid var(--accent-border);
+  pointer-events: none;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.action-btn {
+  width: 100%;
+  justify-self: stretch;
+}
+
+/* Game settings section */
+.game-settings {
+  border: 2px solid var(--border-color);
+  padding: 25px;
+  background: var(--bg-color);
+  position: relative;
+}
+
+.game-settings::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid var(--accent-border);
+  pointer-events: none;
+}
+
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.setting-label {
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.setting-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: auto;
+  height: auto;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 1rem;
+  color: var(--text-color);
+  position: relative;
+}
+
+.setting-checkbox::before {
+  content: '[ ]';
+  color: var(--text-color);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  position: relative;
+}
+
+.setting-checkbox::after {
+  content: 'x';
+  position: absolute;
+  left: 0.7em;
+  top: 0;
+  opacity: 0;
+  color: var(--text-color);
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.setting-checkbox:checked::after {
+  opacity: 1;
+}
+
+.setting-select {
+  background: transparent;
+  border: 2px solid var(--border-color);
+  color: var(--text-color);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.9rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.setting-select:focus {
+  outline: none;
+  background: var(--accent-bg);
+}
+
+/* Lobby section */
+.lobby-section {
+  border: 2px solid var(--border-color);
+  padding: 25px;
+  background: var(--bg-color);
+  position: relative;
+  max-height: 300px;
+}
+
+.lobby-section::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid var(--accent-border);
+  pointer-events: none;
+}
+
+.lobby-content {
+  height: 100%;
+}
+
+.lobby-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.lobby-player {
+  border: 1px solid var(--accent-border);
+  padding: 15px;
+  background: var(--accent-bg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lobby-player.empty {
+  opacity: 0.5;
+  border-style: dashed;
+}
+
+.player-name {
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.host-badge {
+  color: var(--secondary-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.bot-badge {
+  color: var(--secondary-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.player-status {
+  font-size: 0.9rem;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .lobby-page {
+    padding: 10px;
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  
+  .lobby-main {
+    grid-template-columns: 1fr;
+  }
+  
+  .lobby-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .player-name-section {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .name-input {
+    min-width: 150px;
+  }
+  
+  .lobby-players {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .lobby-container {
+    gap: 15px;
+  }
+  
+  .game-actions,
+  .game-settings,
+  .lobby-section {
+    padding: 15px;
+  }
+  
+  .section-title {
+    font-size: 1rem;
+  }
+} 

@@ -4,133 +4,28 @@
   background: var(--bg-color);
   color: var(--text-color);
   font-family: 'JetBrains Mono', 'Courier New', monospace;
-  padding: 20px;
+  padding: 10px;
   position: relative;
   transition: background-color 0.3s ease, color 0.3s ease;
   overflow: hidden;
 }
 
 .game-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* Header */
-.game-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border: 2px solid var(--border-color);
-  background: var(--bg-color);
-  position: relative;
-}
-
-.game-header::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  border: 1px solid var(--accent-border);
-  pointer-events: none;
-}
-
-.player-name-section {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.name-label {
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.name-input {
-  background: transparent;
-  border: 2px solid var(--border-color);
-  color: var(--text-color);
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 1rem;
-  padding: 8px 12px;
-  min-width: 200px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.name-input:focus {
-  outline: none;
-  background: var(--accent-bg);
-}
-
-.back-button {
-  flex-shrink: 0;
-}
-
-/* Main content */
-.game-main {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  height: 50vh; 
-}
-
-.section-title {
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 10px;
-}
-
-/* Action buttons section */
-.game-actions {
-  border: 2px solid var(--border-color);
-  padding: 25px;
-  background: var(--bg-color);
-  position: relative;
-}
-
-.game-actions::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  border: 1px solid var(--accent-border);
-  pointer-events: none;
-}
-
-.action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.action-btn {
   width: 100%;
-  justify-self: stretch;
-}
-
-/* Game settings section */
-.game-settings {
+  margin: 0 auto;
+  height: calc(100vh - 180px);
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 8px;
+  padding: 8px;
+  margin-top: 60px; /* Space for theme toggle */
+  margin-bottom: 20px; /* Space at bottom */
   border: 2px solid var(--border-color);
-  padding: 25px;
   background: var(--bg-color);
   position: relative;
 }
 
-.game-settings::before {
+.game-container::before {
   content: '';
   position: absolute;
   top: -2px;
@@ -141,91 +36,27 @@
   pointer-events: none;
 }
 
-.settings-content {
+/* Left Column - Players and Chat */
+.players-chat-section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
-
-.setting-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.setting-label {
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  display: flex;
-  align-items: center;
   gap: 8px;
-  cursor: pointer;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
 }
 
-.setting-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  width: auto;
-  height: auto;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 1rem;
-  color: var(--text-color);
-  position: relative;
-}
-
-.setting-checkbox::before {
-  content: '[ ]';
-  color: var(--text-color);
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  position: relative;
-}
-
-.setting-checkbox::after {
-  content: 'x';
-  position: absolute;
-  left: 0.7em;
-  top: 0;
-  opacity: 0;
-  color: var(--text-color);
-  font-weight: 500;
-  transition: opacity 0.2s ease;
-}
-
-.setting-checkbox:checked::after {
-  opacity: 1;
-}
-
-.setting-select {
-  background: transparent;
+.players-section {
   border: 2px solid var(--border-color);
-  color: var(--text-color);
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 0.9rem;
-  padding: 6px 10px;
-  cursor: pointer;
-  text-transform: uppercase;
-}
-
-.setting-select:focus {
-  outline: none;
-  background: var(--accent-bg);
-}
-
-/* Lobby section */
-.lobby-section {
-  border: 2px solid var(--border-color);
-  padding: 25px;
+  padding: 8px;
   background: var(--bg-color);
   position: relative;
-  max-height: 300px;
+  flex-shrink: 0;
+  max-height: 380px;
 }
 
-.lobby-section::before {
+.players-section::before {
   content: '';
   position: absolute;
   top: -2px;
@@ -236,101 +67,284 @@
   pointer-events: none;
 }
 
-.lobby-content {
-  height: 100%;
+.player-info {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--accent-border);
 }
 
-.lobby-players {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-}
-
-.lobby-player {
-  border: 1px solid var(--accent-border);
-  padding: 15px;
-  background: var(--accent-bg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.lobby-player.empty {
-  opacity: 0.5;
-  border-style: dashed;
+.player-info:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .player-name {
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.host-badge {
-  color: var(--secondary-text);
-  font-size: 0.8rem;
   font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 5px;
 }
 
-.bot-badge {
-  color: var(--secondary-text);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.player-status {
+.player-score {
   font-size: 0.9rem;
   color: var(--secondary-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-/* Responsive Design */
+/* Chat Section */
+.chat-section {
+  border: 2px solid var(--border-color);
+  background: var(--bg-color);
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 950px;
+  overflow: hidden;
+  z-index: 200; /* Above pause overlay */
+}
+
+.chat-section::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid var(--accent-border);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: calc(100% - 50px);
+  border-bottom: 1px solid var(--accent-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-message {
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.chat-player {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-right: 8px;
+}
+
+.chat-text {
+  color: var(--secondary-text);
+}
+
+.chat-input-form {
+  padding: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.chat-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--accent-border);
+  color: var(--text-color);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  text-transform: none;
+}
+
+.chat-input:focus {
+  outline: none;
+  background: var(--accent-bg);
+}
+
+.chat-input::placeholder {
+  color: var(--secondary-text);
+  opacity: 0.7;
+}
+
+/* Center Column - Game Board */
+.chess-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  min-height: 0;
+}
+
+.placeholder-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--border-color);
+  background: var(--bg-color);
+  position: relative;
+  width: calc(100vh - 200px);
+  height: calc(100vh - 200px);
+  aspect-ratio: 1;
+  text-align: center;
+  padding: 40px;
+}
+
+.placeholder-board::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border: 1px solid var(--accent-border);
+  pointer-events: none;
+}
+
+.placeholder-board h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 20px;
+  color: var(--text-color);
+}
+
+.placeholder-board p {
+  font-size: 1.2rem;
+  color: var(--secondary-text);
+  margin-bottom: 10px;
+  letter-spacing: 0.05em;
+}
+
+
+
+/* Right Column - Timer and Controls */
+.controls-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  max-height: 100%;
+  border: 2px solid var(--border-color);
+  padding: 8px;
+  background: var(--bg-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.controls-section::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid var(--accent-border);
+  pointer-events: none;
+}
+
+.timer-section {
+  padding: 6px 0 10px 0;
+  text-align: center;
+  border-bottom: 1px solid var(--accent-border);
+  margin-bottom: 8px;
+}
+
+.timer-display {
+  font-size: 3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-color);
+}
+
+.game-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-start;
+  max-height: calc(100% - 60px);
+  overflow: hidden;
+}
+
+.control-btn {
+  width: 100%;
+}
+
+/* Game Modal Overlay Styling (Pause & Quit) */
+.pause-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(3px);
+}
+
+.pause-modal-content {
+  background: var(--bg-color);
+  border: 2px solid var(--border-color);
+  padding: 30px;
+  text-align: center;
+  position: relative;
+}
+
+.pause-modal-content::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid var(--accent-border);
+  pointer-events: none;
+}
+
+.pause-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 30px;
+  color: var(--text-color);
+}
+
+.pause-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.pause-btn {
+  min-width: 120px;
+}
+
+/* Responsive adjustments for game modal */
 @media (max-width: 768px) {
-  .game-page {
-    padding: 10px;
-    height: auto;
-    min-height: 100vh;
-    overflow-y: auto;
+  .pause-modal-content {
+    padding: 20px;
+    margin: 20px;
   }
   
-  .game-main {
-    grid-template-columns: 1fr;
-  }
-  
-  .game-header {
+  .pause-buttons {
     flex-direction: column;
     gap: 15px;
-    text-align: center;
-  }
-  
-  .player-name-section {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .name-input {
-    min-width: 150px;
-  }
-  
-  .lobby-players {
-    grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 480px) {
-  .game-container {
-    gap: 15px;
-  }
-  
-  .game-actions,
-  .game-settings,
-  .lobby-section {
-    padding: 15px;
-  }
-  
-  .section-title {
-    font-size: 1rem;
-  }
-} 
+ 
