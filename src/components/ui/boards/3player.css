@@ -1,0 +1,58 @@
+:root {
+    --light: #f6f6e9;
+    --dark:  #b5c49e;
+    --border-color: #333;
+  }
+  
+  /* container stays a square grid for positioning only */
+  .chess-board-3p {
+    display: grid;
+    background: var(--border-color);
+    aspect-ratio: 1;
+    border: 3px solid var(--border-color);
+    margin: auto;
+    /* grid setup moved to inline styles */
+  }
+  
+  /* Base styling for every cell */
+  .chess-square-3p {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    position: relative;
+  }
+  
+  /* Light / dark colors */
+  .chess-square-3p.light   { background: var(--light); }
+  .chess-square-3p.dark    { background: var(--dark);  }
+  
+  /* Clip-paths for each shape type */
+  .chess-square-3p.shape-rhombus {
+    /*  diamond pointing up/down */
+    clip-path: polygon(
+      50% 0%, 
+      100% 50%, 
+      50% 100%, 
+      0% 50%
+    );
+  }
+  
+  .chess-square-3p.shape-parallelogram {
+    /* slanted left→right edges */
+    clip-path: polygon(
+      20% 0%, 
+      100% 0%, 
+      80% 100%, 
+      0% 100%
+    );
+  }
+  
+  .chess-square-3p.shape-kite {
+    /*  a kite with one point narrow */
+    clip-path: polygon(
+      50%   0%, 
+      100%  30%, 
+      50% 100%, 
+      0%   30%
+    );
+  }

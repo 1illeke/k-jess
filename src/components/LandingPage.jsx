@@ -25,7 +25,7 @@ function LandingPage() {
         
         <main className="main">
           <div className="button-group">
-            <Button to="/game" variant="primary" borderStyle="solid">
+            <Button to="/lobby" variant="primary" borderStyle="solid">
               [ Play ]
             </Button>
             <Button variant="secondary" borderStyle="dashed" onClick={handleInfoClick}>
