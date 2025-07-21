@@ -1,1 +1,32 @@
 /* Kill me now */
+
+.threeplayer-container {
+    width:  calc(100vh - 140px);
+    height: calc(100vh - 140px);
+    max-width: 1000px;
+    max-height: 1000px;
+    margin: auto;
+    border: 3px solid var(--border-color);   /* optional, if you want a border */
+    position: relative;
+    aspect-ratio: 960 / 831.3843876330611;   /* preserves the SVG’s natural shape */
+  }
+  
+  /* let the SVG fill the container */
+  .threeplayer-container svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  
+  /* your utility classes */
+  .select-none { user-select: none; }
+  .h-full      { height: 100%; }
+  .w-full      { width: 100%; }
+  .pointer-events-none { pointer-events: none; }
+  
+  /* hover effect on tiles (optional) */
+  .threeplayer-container svg polygon:hover {
+    stroke: #fff;
+    stroke-width: 2;
+    cursor: pointer;
+  }
