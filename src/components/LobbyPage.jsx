@@ -1,65 +1,73 @@
-import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Button, ThemeToggle } from './ui'
-import './LobbyPage.css'
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { io } from 'socket.io-client';
+import { Button, ThemeToggle } from './ui';
+import './LobbyPage.css';
+
+const SOCKET_URL = 'http://localhost:3001';
 
 function LobbyPage() {
-  const navigate = useNavigate()
-  const { gameId } = useParams() // For future multiplayer lobby IDs like /lobby/12345
-  const [playerName, setPlayerName] = useState('Player1')
-  const [gameMode, setGameMode] = useState('1v1')
-  const [randomColors, setRandomColors] = useState(false)
-  const [inviteCode, setInviteCode] = useState(null)
-  const [showLobby, setShowLobby] = useState(false)
-  
-  // Fake players just like my CS games
-  const [lobbyPlayers] = useState([
-    { id: 1, name: 'Player1', isHost: true },
-    { id: 2, name: 'ChessM4ster', isHost: false },
-    { id: 3, name: 'Bot_Alice', isBot: true }
-  ])
+  const navigate = useNavigate();
+  const { gameId } = useParams();
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem('playerName') || 'Set username');
+  const [gameMode, setGameMode] = useState('1v1');
+  const [randomColors, setRandomColors] = useState(false);
+  const [inviteCode, setInviteCode] = useState(null);
+  const [showLobby, setShowLobby] = useState(false);
+  const [lobbyPlayers, setLobbyPlayers] = useState([]);
+  const socketRef = useRef(null);
+
+  // Save username to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('playerName', playerName);
+  }, [playerName]);
+
+  useEffect(() => {
+    if (!showLobby) return;
+    const socket = io(SOCKET_URL);
+    socketRef.current = socket;
+    const roomId = gameId || inviteCode || 'default';
+    socket.emit('joinGame', { gameId: roomId, playerName });
+    socket.on('playerList', (players) => {
+      setLobbyPlayers(players);
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, [showLobby, gameId, inviteCode, playerName]);
 
   const handleStartGame = () => {
-    // Navigate to the actual game page with game mode
-    const gamePath = gameId ? `/game/${gameId}` : '/game'
-    navigate(gamePath, { state: { gameMode, playerName, gameId } })
-  }
+    const gamePath = gameId ? `/game/${gameId}` : '/game';
+    navigate(gamePath, { state: { gameMode, playerName, gameId: gameId || inviteCode || 'default' } });
+  };
 
   const handleInviteFriends = async () => {
     if (!inviteCode) {
-      // Static inv code for now
-      const code = 'KJ001'
-      setInviteCode(code)
-      setShowLobby(true) // Show lobby when invite friends is clicked
-      
-      // fake link aga ma teen selle ilmselt actual lingiks, peame lih ära tegema selle
-      const inviteLink = `www.kjess.lilleke.eu/invite/${code}`
-      
+      const code = 'KJ001';
+      setInviteCode(code);
+      setShowLobby(true);
+      const inviteLink = `www.kjess.lilleke.eu/invite/${code}`;
       try {
-        // Copy to clipboard
-        await navigator.clipboard.writeText(inviteLink)
-        alert(`Invite link copied to clipboard!\n${inviteLink}`)
+        await navigator.clipboard.writeText(inviteLink);
+        alert(`Invite link copied to clipboard!\n${inviteLink}`);
       } catch (err) {
-        // Fallback since "ThEy HaVe A sPeCiAl BrOwSeR"
-        console.error('Failed to copy to clipboard:', err)
-        alert(`Invite code generated: ${code}\nLink: ${inviteLink}`)
+        console.error('Failed to copy to clipboard:', err);
+        alert(`Invite code generated: ${code}\nLink: ${inviteLink}`);
       }
     } else {
-      // If code already exists, copy the link again
-      const inviteLink = `www.kjess.lilleke.eu/invite/${inviteCode}`
+      const inviteLink = `www.kjess.lilleke.eu/invite/${inviteCode}`;
       try {
-        await navigator.clipboard.writeText(inviteLink)
-        alert(`Invite link copied to clipboard!\n${inviteLink}`)
+        await navigator.clipboard.writeText(inviteLink);
+        alert(`Invite link copied to clipboard!\n${inviteLink}`);
       } catch (err) {
-        alert(`Invite link: ${inviteLink}`)
+        alert(`Invite link: ${inviteLink}`);
       }
     }
-  }
+  };
 
   return (
     <div className="lobby-page">
       <ThemeToggle />
-      
       <div className="lobby-container">
         {/* Header */}
         <header className="lobby-header">
@@ -83,7 +91,6 @@ function LobbyPage() {
             ← Back to Home
           </Button>
         </header>
-
         {/* Main content area */}
         <main className="lobby-main">
           {/* Left side - Buttons */}
@@ -109,7 +116,6 @@ function LobbyPage() {
               </Button>
             </div>
           </section>
-
           {/* Right side - Game settings */}
           <section className="game-settings">
             <h3 className="section-title">Settings</h3>
@@ -126,7 +132,6 @@ function LobbyPage() {
                   <option value="1v1v1v1">4 players</option>
                 </select>
               </div>
-
               <div className="setting-item">
                 <label className="setting-label">
                   <input
@@ -141,7 +146,6 @@ function LobbyPage() {
             </div>
           </section>
         </main>
-
         {/* Lobby display - only show when invite friends is clicked */}
         {showLobby && (
           <section className="lobby-section">
@@ -158,7 +162,6 @@ function LobbyPage() {
                     <div className="player-status">Ready</div>
                   </div>
                 ))}
-                
                 {/* Empty slots */}
                 {Array.from({ length: 4 - lobbyPlayers.length }).map((_, index) => (
                   <div key={`empty-${index}`} className="lobby-player empty">
@@ -172,7 +175,7 @@ function LobbyPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
 
-export default LobbyPage 
+export default LobbyPage; 
