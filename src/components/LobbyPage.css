@@ -279,6 +279,31 @@
   font-weight: 700;
 }
 
+.invited-badge {
+  color: var(--secondary-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.invitation-message {
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.invitation-message p {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.invitation-message strong {
+  color: var(--text-color);
+  font-weight: 700;
+}
+
 .player-status {
   font-size: 0.9rem;
   color: var(--secondary-text);

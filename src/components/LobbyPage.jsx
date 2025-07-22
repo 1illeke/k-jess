@@ -1,40 +1,23 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { io } from 'socket.io-client';
-import { Button, ThemeToggle } from './ui';
-import './LobbyPage.css';
-
-const SOCKET_URL = 'http://localhost:3001';
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Button, ThemeToggle } from './ui'
+import './LobbyPage.css'
 
 function LobbyPage() {
-  const navigate = useNavigate();
-  const { gameId } = useParams();
-  const [playerName, setPlayerName] = useState(() => localStorage.getItem('playerName') || 'Set username');
-  const [gameMode, setGameMode] = useState('1v1');
-  const [randomColors, setRandomColors] = useState(false);
-  const [inviteCode, setInviteCode] = useState(null);
-  const [showLobby, setShowLobby] = useState(false);
-  const [lobbyPlayers, setLobbyPlayers] = useState([]);
-  const socketRef = useRef(null);
-
-  // Save username to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem('playerName', playerName);
-  }, [playerName]);
-
-  useEffect(() => {
-    if (!showLobby) return;
-    const socket = io(SOCKET_URL);
-    socketRef.current = socket;
-    const roomId = gameId || inviteCode || 'default';
-    socket.emit('joinGame', { gameId: roomId, playerName });
-    socket.on('playerList', (players) => {
-      setLobbyPlayers(players);
-    });
-    return () => {
-      socket.disconnect();
-    };
-  }, [showLobby, gameId, inviteCode, playerName]);
+  const navigate = useNavigate()
+  const { gameId } = useParams() // For future multiplayer lobby IDs like /lobby/12345
+  const [playerName, setPlayerName] = useState('Player1')
+  const [gameMode, setGameMode] = useState('1v1')
+  const [randomColors, setRandomColors] = useState(false)
+  const [inviteCode, setInviteCode] = useState(null)
+  const [showLobby, setShowLobby] = useState(false)
+  
+  // Fake players just like my CS games
+  const [lobbyPlayers] = useState([
+    { id: 1, name: 'Player1', isHost: true },
+    { id: 2, name: 'ChessM4ster', isHost: false },
+    { id: 3, name: 'Bot_Alice', isBot: true }
+  ])
 
   const handleStartGame = () => {
     const gamePath = gameId ? `/game/${gameId}` : '/game';
@@ -146,9 +129,15 @@ function LobbyPage() {
             </div>
           </section>
         </main>
+
         {/* Lobby display - only show when invite friends is clicked */}
         {showLobby && (
           <section className="lobby-section">
+            {isFromInvitation && (
+              <div className="invitation-message">
+                <p>✓ Joined <strong>{invitationState.inviterName}'s</strong> lobby via invitation!</p>
+              </div>
+            )}
             <h3 className="section-title">Lobby ({lobbyPlayers.length}/4)</h3>
             <div className="lobby-content">
               <div className="lobby-players">
@@ -157,7 +146,6 @@ function LobbyPage() {
                     <span className="player-name">
                       {player.name}
                       {player.isHost && <span className="host-badge">[HOST]</span>}
-                      {player.isBot && <span className="bot-badge">[BOT]</span>}
                     </span>
                     <div className="player-status">Ready</div>
                   </div>
