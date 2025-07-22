@@ -1,23 +1,47 @@
-import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
 import { Button, ThemeToggle } from './ui'
 import './LobbyPage.css'
 
 function LobbyPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { gameId } = useParams() // For future multiplayer lobby IDs like /lobby/12345
-  const [playerName, setPlayerName] = useState('Player1')
+  
+  // Check if coming from invitation
+  const invitationState = location.state
+  const isFromInvitation = invitationState?.inviteCode && invitationState?.playerName
+  
+  const [playerName, setPlayerName] = useState(
+    isFromInvitation ? invitationState.playerName : 'Player1'
+  )
   const [gameMode, setGameMode] = useState('1v1')
   const [randomColors, setRandomColors] = useState(false)
-  const [inviteCode, setInviteCode] = useState(null)
-  const [showLobby, setShowLobby] = useState(false)
+  const [inviteCode, setInviteCode] = useState(
+    isFromInvitation ? invitationState.inviteCode : null
+  )
+  const [showLobby, setShowLobby] = useState(isFromInvitation)
   
   // Fake players just like my CS games
-  const [lobbyPlayers] = useState([
-    { id: 1, name: 'Player1', isHost: true },
-    { id: 2, name: 'ChessM4ster', isHost: false },
-    { id: 3, name: 'Bot_Alice', isBot: true }
-  ])
+  const [lobbyPlayers, setLobbyPlayers] = useState(() => {
+    const basePlayers = [
+      { id: 1, name: 'Player1', isHost: true },
+      { id: 2, name: 'BOT_Chad', isHost: false },
+      { id: 3, name: 'Bot_Alice', isBot: true }
+    ]
+    
+    // Add invited player if coming from invitation
+    if (isFromInvitation) {
+      basePlayers.push({
+        id: basePlayers.length + 1,
+        name: invitationState.playerName,
+        isHost: false,
+        isInvited: true
+      })
+    }
+    
+    return basePlayers
+  })
 
   const handleStartGame = () => {
     // Navigate to the actual game page with game mode
@@ -142,9 +166,14 @@ function LobbyPage() {
           </section>
         </main>
 
-        {/* Lobby display - only show when invite friends is clicked */}
+        {/* Lobby display - only show when invite friends is clicked or joining via invitation */}
         {showLobby && (
           <section className="lobby-section">
+            {isFromInvitation && (
+              <div className="invitation-message">
+                <p>✓ Joined <strong>{invitationState.inviterName}'s</strong> lobby via invitation!</p>
+              </div>
+            )}
             <h3 className="section-title">Lobby ({lobbyPlayers.length}/4)</h3>
             <div className="lobby-content">
               <div className="lobby-players">
@@ -153,7 +182,6 @@ function LobbyPage() {
                     <span className="player-name">
                       {player.name}
                       {player.isHost && <span className="host-badge">[HOST]</span>}
-                      {player.isBot && <span className="bot-badge">[BOT]</span>}
                     </span>
                     <div className="player-status">Ready</div>
                   </div>

@@ -33,7 +33,7 @@ function Modal({
     }
   }, [isOpen])
 
-  // Close modal on Escape key
+  // esc
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -43,7 +43,7 @@ function Modal({
 
     if (isOpen) {
       document.addEventListener('keydown', handleEscape)
-      // Prevent body scroll when modal is open
+      // scroll shit
       document.body.style.overflow = 'hidden'
     }
 

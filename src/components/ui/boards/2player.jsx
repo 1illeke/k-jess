@@ -1,7 +1,6 @@
 import './2player.css'
 
 function TwoPlayerBoard() {
-  // Create chess board (8x8 grid)
   const createChessBoard = () => {
     const board = []
     for (let row = 0; row < 8; row++) {
