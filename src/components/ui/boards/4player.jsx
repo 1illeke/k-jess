@@ -1,16 +1,14 @@
 import './4player.css'
 
 function FourPlayerBoard() {
-  // Create 4-player chess board in cross shape
   const createFourPlayerBoard = () => {
     const board = []
-    const centerSize = 8 // Central 8x8 area
-    const extensionLength = 3 // How far each arm extends
-    const totalSize = centerSize + (extensionLength * 2) // 14 total
+    const centerSize = 8 
+    const extensionLength = 3 
+    const totalSize = centerSize + (extensionLength * 2)
     
     for (let row = 0; row < totalSize; row++) {
       for (let col = 0; col < totalSize; col++) {
-        // Define the cross shape boundaries
         const inVerticalArm = col >= extensionLength && col < extensionLength + centerSize
         const inHorizontalArm = row >= extensionLength && row < extensionLength + centerSize
         

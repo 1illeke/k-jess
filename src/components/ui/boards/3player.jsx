@@ -4,7 +4,7 @@ const addSquareIds = (svgString) => {
   return svgString.replace(
     /<polygon ([^>]*?)><\/polygon>\s*<text[^>]*>([^<]*)<\/text>/g,
     (match, polygonAttrs, textContent) => {
-      // Extract the square name (remove HTML comments and trim)
+      // Extract the square name
       const squareName = textContent.replace(/<!--\s*-->/g, '').trim();
       const polygonWithId = `<polygon ${polygonAttrs} id="square-${squareName}"></polygon>`;
       const textElement = match.substring(match.indexOf('<text'));
