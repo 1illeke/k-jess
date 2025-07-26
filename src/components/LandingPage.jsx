@@ -1,10 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button, ThemeToggle, Modal } from './ui'
 import './LandingPage.css'
 
 function LandingPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
   const [selectedInfoSection, setSelectedInfoSection] = useState('General')
+  const [isWipModalOpen, setIsWipModalOpen] = useState(false)
+
+  // Check if user has seen the WIP modal before
+  useEffect(() => {
+    const hasSeenWipModal = localStorage.getItem('kjess-wip-modal-seen')
+    if (!hasSeenWipModal) {
+      // Small delay to ensure page is loaded before showing modal
+      setTimeout(() => {
+        setIsWipModalOpen(true)
+      }, 500)
+    }
+  }, [])
 
   const handleInfoClick = () => {
     setIsInfoModalOpen(true)
@@ -13,6 +25,12 @@ function LandingPage() {
   const handleCloseModal = () => {
     setIsInfoModalOpen(false)
     setSelectedInfoSection('General') // Reset to General when closing
+  }
+
+  const handleCloseWipModal = () => {
+    setIsWipModalOpen(false)
+    // Mark as seen so it won't show again
+    localStorage.setItem('kjess-wip-modal-seen', 'true')
   }
 
   const handleSectionChange = (section) => {
@@ -123,6 +141,18 @@ function LandingPage() {
           </div>
         </div>
       </Modal>
+
+             <Modal 
+         isOpen={isWipModalOpen}
+         onClose={handleCloseWipModal}
+         title="Work in Progress"
+         className="wip-modal"
+       >
+         <div className="wip-modal-content">
+           <p>This is a Work In Progress project.</p>
+           <p>Currently features may be broken or not added yet.</p>
+         </div>
+       </Modal>
     </div>
   )
 }
