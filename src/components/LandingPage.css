@@ -247,3 +247,23 @@
     padding-top: 15px;
   }
 } 
+
+/* WIP Modal Styles */
+.landing-page .wip-modal .modal-content {
+  max-width: 200px !important;
+  width: 80% !important;
+}
+
+.wip-modal-content {
+  text-align: center;
+}
+
+.wip-modal-content p {
+  margin-bottom: 15px;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+.wip-modal-content p:last-child {
+  margin-bottom: 0;
+} 
