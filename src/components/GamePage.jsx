@@ -1,151 +1,245 @@
-import { useState, useEffect, useRef } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
-import { io } from 'socket.io-client';
-import { Button, ThemeToggle, TwoPlayerBoard, ThreePlayerBoard, FourPlayerBoard } from './ui';
-import './GamePage.css';
-
-const SOCKET_URL = 'http://localhost:3001';
+import { useState, useEffect, useRef } from 'react'
+import { useLocation, useParams } from 'react-router-dom'
+import { Button, ThemeToggle, TwoPlayerBoard, ThreePlayerBoard, FourPlayerBoard } from './ui'
+import './GamePage.css'
+import { gameSocket, chatSocket, timerSocket } from '../sockets'
+import socket from '../sockets/socket.js'
 
 function GamePage() {
-  const location = useLocation();
-  const { gameId } = useParams();
-  const { gameMode = '1v1' } = location.state || {};
-  const playerName = location.state?.playerName || localStorage.getItem('playerName') || 'Player1';
+  const location = useLocation()
+  const { gameId } = useParams()
+  const gameMode = location.state?.gameMode ?? '1v1'
+  const playerName = location.state?.playerName || localStorage.getItem('playerName') || 'Player1'
+  const lobbyPublic = location.state?.lobbyPublic || location.state?.lobbyPlayers || []
+  const gameSettings = location.state?.gameSettings || {}
 
-  const [gameTime, setGameTime] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState('');
-  const [pausedBy, setPausedBy] = useState('');
-  const [chatMessages, setChatMessages] = useState(() => {
-    const saved = localStorage.getItem(`chat_${gameId || 'default'}`);
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [newMessage, setNewMessage] = useState('');
-  const [players, setPlayers] = useState([]);
-  const chatMessagesRef = useRef(null);
-  const socketRef = useRef(null);
 
-  // Get that game mode
-  const getPlayerCount = () => {
-    switch(gameMode) {
-      case '1v1': return 2;
-      case '1v1v1': return 3;
-      case '1v1v1v1': return 4;
-      default: return 2;
+  const [gameTime, setGameTime] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [modalType, setModalType] = useState('')
+  const [pausedBy, setPausedBy] = useState('')
+  const [countdown, setCountdown] = useState(null)
+  const [chatMessages, setChatMessages] = useState(() => [])
+  const [newMessage, setNewMessage] = useState('')
+  const [gamePlayers, setGamePlayers] = useState(() => {
+
+    return lobbyPublic.map(player => ({
+      id: player.id || player.playerId,
+      name: player.name,
+      connected: player.connected !== false, 
+    }));
+  })
+  const chatMessagesRef = useRef(null)
+
+  // Get stable player ID
+  const getPlayerId = () => {
+    let playerId = localStorage.getItem('playerId');
+    if (!playerId) {
+      playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('playerId', playerId);
     }
-  };
+    return playerId;
+  }
 
-  // Connect to socket.io server
+  // Load timer updates from backend
   useEffect(() => {
-    const socket = io(SOCKET_URL);
-    socketRef.current = socket;
-    socket.emit('joinGame', { gameId: gameId || 'default', playerName });
+    const stopTimer = timerSocket.listenTimer({
+      onUpdate: ({ code, elapsed }) => {
+        const currentCode = gameId ? gameId : 'default'
+        if (currentCode === code) setGameTime(elapsed)
+      }
+    })
+    return () => stopTimer && stopTimer()
+  }, [gameId])
 
-    socket.on('playerList', (playerList) => {
-      setPlayers(playerList);
-    });
-    socket.on('chat', (msg) => {
-      setChatMessages((prev) => [...prev, msg]);
-    });
-    // TODO: socket.on('move', ...)
+  // Countdown effect - start timer after 3 seconds
+  useEffect(() => {
+    if (countdown && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(countdown - 1)
+      }, 1000)
+      return () => clearTimeout(timer)
+    } else if (countdown === 0) {
+      setCountdown(null)
+      // Start the actual timer
+      timerSocket.startTimer({ code: gameId || 'default' })
+    }
+  }, [countdown, gameId])
 
+  // Listen to lobby start
+  useEffect(() => {
+    if (!gameId) return;
+
+    const handleLobbyStarted = ({ settings }) => {
+      // countdown
+      setIsPaused(false)
+      setCountdown(3)
+    }
+
+    socket.on('lobby:started', handleLobbyStarted);
+    
     return () => {
-      socket.disconnect();
-    };
+      socket.off('lobby:started', handleLobbyStarted);
+    }
+  }, [gameId])
+
+  // Listen to game lifecycle
+  useEffect(() => {
+    const stopGame = gameSocket.listenGame({
+      onStarted: ({ code }) => {
+        const currentCode = gameId ? gameId : 'default'
+        if (currentCode === code) {
+          setIsPaused(false)
+          setCountdown(3)
+        }
+      },
+      onPaused: ({ code, pausedBy }) => {
+        const currentCode = gameId ? gameId : 'default'
+        if (currentCode === code) {
+          setIsPaused(true)
+          setPausedBy(pausedBy || 'Unknown Player')
+          setModalType('pause')
+          setShowModal(true)
+          timerSocket.pauseTimer({ code })
+        }
+      },
+      onResumed: ({ code, resumedBy }) => {
+        const currentCode = gameId ? gameId : 'default'
+        if (currentCode === code) {
+          setIsPaused(false)
+          setShowModal(false)
+          setModalType('')
+          timerSocket.startTimer({ code })
+        }
+      },
+      onEnded: ({ code }) => {
+        const currentCode = gameId ? gameId : 'default'
+        if (currentCode === code) {
+          // end logic needs to be updated
+        }
+      }
+    })
+    return () => stopGame && stopGame()
+  }, [gameId, playerName])
+
+  useEffect(() => {
+    if (gameId) {
+      socket.emit('lobby:join', { 
+        code: gameId, 
+        playerId: getPlayerId(), 
+        name: playerName 
+      });
+      gameSocket.joinGame({ code: gameId }, {
+        onJoined: () => {},
+        onError: (err) => console.error('Failed to join game:', err)
+      });
+      const handleLobbyState = (data) => {
+        const { lobbyPublic } = data || {};
+        if (lobbyPublic?.players) {
+          setGamePlayers(lobbyPublic.players.map(player => ({
+            id: player.playerId,
+            name: player.name,
+            connected: player.connected,
+          })));
+        }
+        
+        // Check if lobby is already in game phase and start countdown if needed
+        if (lobbyPublic?.phase === 'in_game' && countdown === null && !isPaused) {
+          setCountdown(3);
+        }
+      };
+
+      socket.on('lobby:state', handleLobbyState);
+
+      return () => {
+        socket.off('lobby:state', handleLobbyState);
+      };
+    }
   }, [gameId, playerName]);
 
-  // Persist chat messages to localStorage
+  // Chat
   useEffect(() => {
-    localStorage.setItem(`chat_${gameId || 'default'}`, JSON.stringify(chatMessages));
-  }, [chatMessages, gameId]);
-  // On gameId change, load chat from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem(`chat_${gameId || 'default'}`);
-    if (saved) setChatMessages(JSON.parse(saved));
-  }, [gameId]);
+    const stopChat = chatSocket.listenChat({
+      onMessage: (msg) => {
+        setChatMessages((prev) => [...prev, msg])
+      }
+    })
+    return () => stopChat && stopChat()
+  }, [])
 
-  // Timer
-  useEffect(() => {
-    let interval = null;
-    if (!isPaused) {
-      interval = setInterval(() => {
-        setGameTime(time => time + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPaused]);
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Auto-scroll
+  // Auto-scroll chat
   useEffect(() => {
     if (chatMessagesRef.current) {
-      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight
     }
-  }, [chatMessages]);
+  }, [chatMessages])
 
   const handlePause = () => {
     if (!isPaused) {
-      setIsPaused(true);
-      setPausedBy(playerName);
-      setModalType('pause');
-      setShowModal(true);
-      // Add pause message to chat
-      socketRef.current.emit('chat', { gameId: gameId || 'default', message: `${playerName} paused the game`, player: 'System' });
+      gameSocket.pauseGame({ code: gameId || 'default', playerName }, { onPaused: () => {} })
     }
-  };
+  }
 
   const handleResume = () => {
-    setIsPaused(false);
-    setShowModal(false);
-    setModalType('');
-    // Add resume message to chat
-    socketRef.current.emit('chat', { gameId: gameId || 'default', message: `Game resumed`, player: 'System' });
-  };
+    gameSocket.resumeGame({ code: gameId || 'default', playerName }, { onResumed: () => {} })
+  }
 
   const handleQuit = () => {
-    setModalType('quit');
-    setShowModal(true);
-  };
+    setModalType('quit')
+    setShowModal(true)
+  }
 
   const handleConfirmQuit = () => {
-    socketRef.current.emit('chat', { gameId: gameId || 'default', message: `${playerName} left the game`, player: 'System' });
-    setTimeout(() => {
-      window.history.back();
-    }, 500);
-  };
+    gameSocket.quitGame(
+      { code: gameId || 'default', playerName },
+      {
+        onEnded: () => {},
+        onNavigate: () => {
+          setTimeout(() => {
+            window.history.back()
+          }, 300)
+        }
+      }
+    )
+  }
 
   const handleCloseModal = () => {
-    setShowModal(false);
-    setModalType('');
-  };
+    setShowModal(false)
+    setModalType('')
+  }
 
   const handleSendMessage = (e) => {
-    e.preventDefault();
+    e.preventDefault()
     if (newMessage.trim()) {
-      socketRef.current.emit('chat', { gameId: gameId || 'default', message: newMessage.trim(), player: playerName });
-      setNewMessage('');
+      chatSocket.sendMessage({ 
+        code: gameId || 'default', 
+        playerId: getPlayerId(),
+        playerName, 
+        text: newMessage.trim() 
+      })
+      setNewMessage('')
     }
-  };
+  }
 
-  // Show that game mode
   const renderBoard = () => {
     switch(gameMode) {
       case '1v1':
-        return <TwoPlayerBoard />;
+        return <TwoPlayerBoard />
       case '1v1v1':
-        return <ThreePlayerBoard />;
+        return <ThreePlayerBoard />
       case '1v1v1v1':
-        return <FourPlayerBoard />;
+        return <FourPlayerBoard />
       default:
-        return <TwoPlayerBoard />;
+        return <TwoPlayerBoard />
     }
-  };
+  }
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
 
   return (
     <div className="game-page">
@@ -153,14 +247,23 @@ function GamePage() {
       <div className="game-container">
         {/* Left Column - Players and Chat */}
         <aside className="players-chat-section">
-          {/* Players */}
           <div className="players-section">
-            {players.map((player) => (
-              <div key={player.id} className="player-info">
-                <div className="player-name">{player.name}</div>
-                <div className="player-score">Score: 0001</div>
-              </div>
-            ))}
+            <h3 className="players-title">Players ({gamePlayers.length})</h3>
+            <div className="players-list">
+              {gamePlayers.map((player) => (
+                <div key={player.id} className={`game-player ${!player.connected ? 'offline' : ''}`}>
+                  <span className="player-name">
+                    {player.name}
+                    {player.id === getPlayerId() && (
+                      <span className="you-tag">(You)</span>
+                    )}
+                  </span>
+                  <div className="player-status">
+                    {player.connected ? 'Online' : 'Offline'}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
           {/* Chat */}
           <div className="chat-section">
@@ -168,10 +271,10 @@ function GamePage() {
               className="chat-messages"
               ref={chatMessagesRef}
             >
-              {chatMessages.map((msg) => (
-                <div key={msg.id} className="chat-message">
-                  <span className="chat-player">{msg.player}:</span>
-                  <span className="chat-text">{msg.message}</span>
+              {chatMessages.map((msg, idx) => (
+                <div key={`${msg.timestamp}-${idx}`} className="chat-message">
+                  <span className="chat-player">{msg.playerName}:</span>
+                  <span className="chat-text">{msg.text}</span>
                 </div>
               ))}
             </div>
@@ -194,7 +297,11 @@ function GamePage() {
         {/* Right Column - Timer and Controls */}
         <aside className="controls-section">
           <div className="timer-section">
-            <div className="timer-display">{formatTime(gameTime)}</div>
+            {countdown ? (
+              <div className="countdown-display">Starting in {countdown}...</div>
+            ) : (
+              <div className="timer-display">{formatTime(gameTime)}</div>
+            )}
           </div>
           <div className="game-controls">
             <Button
@@ -217,8 +324,8 @@ function GamePage() {
           </div>
         </aside>
       </div>
-      {/* Game Modal */}
-      {showModal && (
+      {/* Game Modal - Only for Pause and Quit */}
+      {showModal && modalType !== 'countdown' && (
         <div className="pause-overlay">
           <div className="pause-modal-content">
             <h2 className="pause-title">
@@ -249,7 +356,7 @@ function GamePage() {
         </div>
       )}
     </div>
-  );
+  )
 }
 
-export default GamePage; 
+export default GamePage 

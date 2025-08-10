@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { LandingPage, LobbyPage, GamePage, InvitationPage } from './components'
+import { LandingPage, LobbyPage, GamePage, InvitationPage, AdminPage } from './components'
 import './App.css'
 
 function App() {
@@ -13,6 +13,7 @@ function App() {
           <Route path="/lobby/:gameId" element={<LobbyPage />} />
           <Route path="/game" element={<GamePage />} />
           <Route path="/game/:gameId" element={<GamePage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </div>
     </Router>
