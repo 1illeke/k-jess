@@ -86,7 +86,7 @@ function LobbyPage() {
                 onClick={handleStartGame}
                 className="action-btn"
               >
-                {showLobby ? '[ Start Game ]' : '[ Look for a Game ]'}
+                {showLobby ? '[ Start Game ]' : '[ Queue ]'}
               </Button>
               <Button 
                 variant="secondary" 
@@ -95,7 +95,7 @@ function LobbyPage() {
                 className="action-btn"
                 title={inviteCode ? "Click to copy invite link again" : "Generate invite code"}
               >
-                {inviteCode ? `[ ${inviteCode} ]` : '[ Invite Friends ]'}
+                {inviteCode ? `[ ${inviteCode} ]` : '[ Lobby ]'}
               </Button>
             </div>
           </section>
@@ -133,11 +133,6 @@ function LobbyPage() {
         {/* Lobby display - only show when invite friends is clicked */}
         {showLobby && (
           <section className="lobby-section">
-            {isFromInvitation && (
-              <div className="invitation-message">
-                <p>✓ Joined <strong>{invitationState.inviterName}'s</strong> lobby via invitation!</p>
-              </div>
-            )}
             <h3 className="section-title">Lobby ({lobbyPlayers.length}/4)</h3>
             <div className="lobby-content">
               <div className="lobby-players">
