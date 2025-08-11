@@ -56,9 +56,9 @@
   display: none;
 }
 
-.landing-page {
+.landing-page { /* scrollbar visibility tweaks */
   -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  scrollbar-width: none;  /* Firefox */
+  scrollbar-width: none;      /* Firefox */
 }
 
 .container {
