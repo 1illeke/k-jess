@@ -21,12 +21,22 @@ function transformPlayers(lobbyPublic) {
 }
 
 // Emitters
-export function createLobby({ playerName }, { onCreated, onError, onPlayers } = {}) {
+export function createLobby({ playerName }, { onCreated, onError, onPlayers, onLobbyState } = {}) {
   const playerId = getPlayerId();
   
   const handleError = (err) => onError?.(err);
+  const handleState = (data) => {
+    const { lobbyPublic } = data || {};
+    if (lobbyPublic) {
+      if (onPlayers) {
+        onPlayers(transformPlayers(lobbyPublic));
+      }
+      if (onLobbyState) {
+        onLobbyState(lobbyPublic);
+      }
+    }
+  };
 
-  // only use ACK callback for creation, dont listen to lobby:state for creation
   socket.emit(LOBBY_EVENTS.CREATE, { playerId, name: playerName }, (response) => {
     if (response?.code && onCreated) {
       onCreated({ code: response.code });
@@ -35,9 +45,11 @@ export function createLobby({ playerName }, { onCreated, onError, onPlayers } = 
   });
 
   socket.on(LOBBY_EVENTS.ERROR, handleError);
+  socket.on(LOBBY_EVENTS.STATE, handleState);
 
   return () => {
     socket.off(LOBBY_EVENTS.ERROR, handleError);
+    socket.off(LOBBY_EVENTS.STATE, handleState);
   };
 }
 
