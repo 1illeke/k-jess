@@ -1,44 +1,50 @@
 import { createGameSession, getGameSession, removeGameSession } from '../services/game.service.js';
 import { lobbyService } from '../services/lobby.service.js';
+import { GAME_EVENTS } from '../constants/socket-events.js';
 
 export function registerGameSocket(io) {
   io.on('connection', (socket) => {
     
-    socket.on('joinGame', ({ code } = {}) => {
+    socket.on(GAME_EVENTS.JOIN, ({ code } = {}, ack) => {
       try {
         const lobby = lobbyService.getLobby(code);
         if (!lobby) {
-          socket.emit('gameError', { message: 'Game not found' });
+          socket.emit(GAME_EVENTS.ERROR, { message: 'Game not found' });
           return;
         }
 
         socket.join(code);
         
         // Send game state to the joining player
-        socket.emit('gameJoined', { 
+        const gameData = { 
           code, 
           players: Array.from(lobby.players.values()).map(p => ({
             id: p.playerId,
             name: p.name,
             connected: p.connected,
           }))
-        });
+        };
+        
+        socket.emit(GAME_EVENTS.JOINED, gameData);
+        if (ack) ack({ success: true, ...gameData });
       } catch (err) {
         console.error('Error joining game:', err);
-        socket.emit('gameError', { message: err.message || 'Failed to join game' });
+        const errorMsg = err.message || 'Failed to join game';
+        socket.emit(GAME_EVENTS.ERROR, { message: errorMsg });
+        if (ack) ack({ success: false, error: errorMsg });
       }
     });
-    socket.on('startGame', ({ code, settings } = {}) => {
+    socket.on(GAME_EVENTS.START, ({ code, settings } = {}, ack) => {
       try {
         const lobby = lobbyService.getLobby(code);
         if (!lobby) {
-          socket.emit('gameError', { message: 'Lobby not found' });
+          socket.emit(GAME_EVENTS.ERROR, { message: 'Lobby not found' });
           return;
         }
 
         const host = lobby.players.get(socket.id);
         if (!host || lobby.hostId !== socket.id) {
-          socket.emit('gameError', { message: 'Only the host can start the game' });
+          socket.emit(GAME_EVENTS.ERROR, { message: 'Only the host can start the game' });
           return;
         }
 
@@ -53,37 +59,41 @@ export function registerGameSocket(io) {
           .map(p => ({ id: p.socketId, name: p.name }));
 
         const session = createGameSession(code, settings || {}, players);
-        io.to(code).emit('gameStarted', { code, settings: session.settings, players: session.players });
+        const gameData = { code, settings: session.settings, players: session.players };
+        io.to(code).emit(GAME_EVENTS.STARTED, gameData);
+        if (ack) ack({ success: true, ...gameData });
       } catch (err) {
         console.error('Error starting game:', err);
-        socket.emit('gameError', { message: err.message || 'Failed to start game' });
+        const errorMsg = err.message || 'Failed to start game';
+        socket.emit(GAME_EVENTS.ERROR, { message: errorMsg });
+        if (ack) ack({ success: false, error: errorMsg });
       }
     });
 
-    socket.on('pauseGame', ({ code, playerName } = {}) => {
+    socket.on(GAME_EVENTS.PAUSE, ({ code, playerName } = {}) => {
       const session = getGameSession(code);
       if (!session) {
         return; // Ignore if not in an active game
       }
-      io.to(code).emit('gamePaused', { code, pausedBy: playerName || 'Unknown Player' });
+      io.to(code).emit(GAME_EVENTS.PAUSED, { code, pausedBy: playerName || 'Unknown Player' });
     });
 
-    socket.on('resumeGame', ({ code, playerName } = {}) => {
+    socket.on(GAME_EVENTS.RESUME, ({ code, playerName } = {}) => {
       const session = getGameSession(code);
       if (!session) {
         return; // Ignore if not in an active game
       }
-      io.to(code).emit('gameResumed', { code, resumedBy: playerName || 'Unknown Player' });
+      io.to(code).emit(GAME_EVENTS.RESUMED, { code, resumedBy: playerName || 'Unknown Player' });
     });
 
-    socket.on('quitGame', ({ code, playerName } = {}) => {
+    socket.on(GAME_EVENTS.QUIT, ({ code, playerName } = {}) => {
       const session = getGameSession(code);
       if (!session) return; // Ignore if not in an active game
       const message = `${playerName || 'A'} player quit`;
-      io.to(code).emit('gameEnded', { code, message });
+      io.to(code).emit(GAME_EVENTS.ENDED, { code, message });
       removeGameSession(code);
       // send back to lobby
-      io.to(code).emit('navigateAway', { destination: 'lobby' });
+      io.to(code).emit(GAME_EVENTS.NAVIGATE_AWAY, { destination: 'lobby' });
     });
   });
 }

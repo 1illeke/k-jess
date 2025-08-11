@@ -4,6 +4,7 @@ import { Button, ThemeToggle, TwoPlayerBoard, ThreePlayerBoard, FourPlayerBoard 
 import './GamePage.css'
 import { gameSocket, chatSocket, timerSocket } from '../sockets'
 import socket from '../sockets/socket.js'
+import { LOBBY_EVENTS } from '../../constants/socket-events.js'
 
 function GamePage() {
   const location = useLocation()
@@ -23,11 +24,11 @@ function GamePage() {
   const [chatMessages, setChatMessages] = useState(() => [])
   const [newMessage, setNewMessage] = useState('')
   const [gamePlayers, setGamePlayers] = useState(() => {
-
     return lobbyPublic.map(player => ({
       id: player.id || player.playerId,
       name: player.name,
-      connected: player.connected !== false, 
+      connected: player.connected !== false,
+      color: player.color || 'White' // Use server-assigned color or default
     }));
   })
   const chatMessagesRef = useRef(null)
@@ -77,10 +78,10 @@ function GamePage() {
       setCountdown(3)
     }
 
-    socket.on('lobby:started', handleLobbyStarted);
+    socket.on(LOBBY_EVENTS.STARTED, handleLobbyStarted);
     
     return () => {
-      socket.off('lobby:started', handleLobbyStarted);
+      socket.off(LOBBY_EVENTS.STARTED, handleLobbyStarted);
     }
   }, [gameId])
 
@@ -125,7 +126,7 @@ function GamePage() {
 
   useEffect(() => {
     if (gameId) {
-      socket.emit('lobby:join', { 
+      socket.emit(LOBBY_EVENTS.JOIN, { 
         code: gameId, 
         playerId: getPlayerId(), 
         name: playerName 
@@ -137,11 +138,13 @@ function GamePage() {
       const handleLobbyState = (data) => {
         const { lobbyPublic } = data || {};
         if (lobbyPublic?.players) {
-          setGamePlayers(lobbyPublic.players.map(player => ({
+          const players = lobbyPublic.players.map(player => ({
             id: player.playerId,
             name: player.name,
             connected: player.connected,
-          })));
+            color: player.color || 'White' // Use server-assigned color
+          }));
+          setGamePlayers(players);
         }
         
         // Check if lobby is already in game phase and start countdown if needed

@@ -1,8 +1,9 @@
 import { appendMessage } from '../services/chat.service.js';
+import { CHAT_EVENTS } from '../constants/socket-events.js';
 
 export function registerChatSocket(io) {
   io.on('connection', (socket) => {
-    socket.on('sendMessage', ({ code, playerId, playerName, text } = {}) => {
+    socket.on(CHAT_EVENTS.SEND_MESSAGE, ({ code, playerId, playerName, text } = {}) => {
       if (!code || !text) return;
       const message = {
         playerId: playerId || socket.id,
@@ -11,7 +12,7 @@ export function registerChatSocket(io) {
         timestamp: Date.now(),
       };
       appendMessage(code, message);
-      io.to(code).emit('messageReceived', message);
+      io.to(code).emit(CHAT_EVENTS.MESSAGE_RECEIVED, message);
     });
   });
 }

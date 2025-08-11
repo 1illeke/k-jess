@@ -4,6 +4,8 @@ import { toErrorResponse } from '../utils/errors.js';
 import { validatePayloadSize } from '../utils/validate.js';
 import { now } from '../utils/time.js';
 import { createGameSession } from '../services/game.service.js';
+import { LOBBY_EVENTS } from '../constants/socket-events.js';
+import { NAMESPACES } from '../constants/socket-namespaces.js';
 
 // Rate limiting per socket
 const rateLimiter = new Map();
@@ -31,10 +33,10 @@ function checkRateLimit(socketId) {
  * @param {*} io - Socket.IO server
  * @param {string} code - Lobby code
  */
-function emitLobbyState(io, code) {
+function emitLobbyState(ioOrNamespace, code) {
   const lobbyPublic = lobbyService.getPublicView(code);
   if (lobbyPublic) {
-    io.to(code).emit('lobby:state', {
+    ioOrNamespace.to(code).emit(LOBBY_EVENTS.STATE, {
       lobbyPublic,
       serverNow: now()
     });
@@ -51,7 +53,7 @@ function handleEvent(socket, eventName, handler) {
     try {
       // Rate limiting
       if (!checkRateLimit(socket.id)) {
-        socket.emit('lobby:error', {
+        socket.emit(LOBBY_EVENTS.ERROR, {
           reason: 'RATE_LIMITED',
           details: 'Too many requests, please slow down'
         });
@@ -69,7 +71,7 @@ function handleEvent(socket, eventName, handler) {
     } catch (error) {
       console.error(`Error in ${eventName}:`, error);
       const errorResponse = toErrorResponse(error);
-      socket.emit('lobby:error', {
+      socket.emit(LOBBY_EVENTS.ERROR, {
         reason: errorResponse.code,
         details: errorResponse.message
       });
@@ -78,18 +80,34 @@ function handleEvent(socket, eventName, handler) {
 }
 
 export function registerLobbySocket(io) {
-  presenceService.start(
-    (serverNow) => {
-      for (const code of lobbyService.getActiveCodes()) {
-        io.to(code).emit('lobby:heartbeat', { serverNow });
-      }
-    },
-    (socketId) => {
-      handlePlayerDisconnection(io, socketId);
-    }
-  );
+  // Create lobby namespace for better isolation
+  const lobbyNamespace = io.of(NAMESPACES.LOBBY);
+  
+  // For backward compatibility, also register on default namespace
+  registerLobbyHandlers(io);
+  registerLobbyHandlers(lobbyNamespace, true);
+}
 
-  io.on('connection', (socket) => {
+function registerLobbyHandlers(ioOrNamespace, isNamespace = false) {
+  if (!isNamespace) {
+    // Only start presence service once for the default namespace
+    presenceService.start(
+      (serverNow) => {
+        for (const code of lobbyService.getActiveCodes()) {
+          ioOrNamespace.to(code).emit(LOBBY_EVENTS.HEARTBEAT, { serverNow });
+          // Also emit to namespace if it exists
+          if (ioOrNamespace.of) {
+            ioOrNamespace.of(NAMESPACES.LOBBY).to(code).emit(LOBBY_EVENTS.HEARTBEAT, { serverNow });
+          }
+        }
+      },
+      (socketId) => {
+        handlePlayerDisconnection(ioOrNamespace, socketId);
+      }
+    );
+  }
+
+  ioOrNamespace.on('connection', (socket) => {
     
 
     /**
@@ -97,7 +115,7 @@ export function registerLobbySocket(io) {
      * Payload: { playerId, name, settings? }
      * Response: ACK with { code } or error
      */
-    socket.on('lobby:create', handleEvent(socket, 'lobby:create', (data, ack) => {
+    socket.on(LOBBY_EVENTS.CREATE, handleEvent(socket, LOBBY_EVENTS.CREATE, (data, ack) => {
       const { playerId, name, settings } = data || {};
       
       const code = lobbyService.createLobby({
@@ -108,7 +126,7 @@ export function registerLobbySocket(io) {
       });
 
       socket.join(code);
-      emitLobbyState(io, code);
+      emitLobbyState(ioOrNamespace, code);
       
       if (ack) ack({ code });
     }));
@@ -118,7 +136,7 @@ export function registerLobbySocket(io) {
      * Payload: { code, playerId, name }
      * Response: Joins room and emits state
      */
-    socket.on('lobby:join', handleEvent(socket, 'lobby:join', (data, ack) => {
+    socket.on(LOBBY_EVENTS.JOIN, handleEvent(socket, LOBBY_EVENTS.JOIN, (data, ack) => {
       const { code, playerId, name } = data || {};
       
       const player = lobbyService.joinLobby({
@@ -137,17 +155,17 @@ export function registerLobbySocket(io) {
         connected: player.connected,
       };
       
-      socket.to(code).emit('lobby:playerJoined', { playerPublic });
-      emitLobbyState(io, code);
+      socket.to(code).emit(LOBBY_EVENTS.PLAYER_JOINED, { playerPublic });
+      emitLobbyState(ioOrNamespace, code);
       
-      if (ack) ack({ success: true });
+      if (ack) ack({ success: true, player: playerPublic });
     }));
 
     /**
      * lobby:leave - Leaves current lobby
      * Payload: { code }
      */
-    socket.on('lobby:leave', handleEvent(socket, 'lobby:leave', (data) => {
+    socket.on(LOBBY_EVENTS.LEAVE, handleEvent(socket, LOBBY_EVENTS.LEAVE, (data) => {
       const { code } = data || {};
       
       const removed = lobbyService.leaveLobby({
@@ -166,12 +184,12 @@ export function registerLobbySocket(io) {
               connected: player.connected,
             };
             
-            socket.to(code).emit('lobby:playerLeft', { playerPublic });
+            socket.to(code).emit(LOBBY_EVENTS.PLAYER_LEFT, { playerPublic });
           }
         }
         
         socket.leave(code);
-        emitLobbyState(io, code);
+        emitLobbyState(ioOrNamespace, code);
       }
     }));
 
@@ -180,7 +198,7 @@ export function registerLobbySocket(io) {
      * lobby:updateSettings - Updates lobby settings (host only)
      * Payload: { code, partialSettings }
      */
-    socket.on('lobby:updateSettings', handleEvent(socket, 'lobby:updateSettings', (data) => {
+    socket.on(LOBBY_EVENTS.UPDATE_SETTINGS, handleEvent(socket, LOBBY_EVENTS.UPDATE_SETTINGS, (data) => {
       const { code, partialSettings } = data || {};
       
       const lobby = lobbyService.getLobby(code);
@@ -192,18 +210,18 @@ export function registerLobbySocket(io) {
         partialSettings
       });
 
-      io.to(code).emit('lobby:settingsUpdated', {
+      ioOrNamespace.to(code).emit(LOBBY_EVENTS.SETTINGS_UPDATED, {
         settings: lobby.settings
       });
       
-      emitLobbyState(io, code);
+      emitLobbyState(ioOrNamespace, code);
     }));
 
     /**
      * lobby:startGame - Starts the game (host only)
      * Payload: { code }
      */
-    socket.on('lobby:startGame', handleEvent(socket, 'lobby:startGame', (data) => {
+    socket.on(LOBBY_EVENTS.START_GAME, handleEvent(socket, LOBBY_EVENTS.START_GAME, (data, ack) => {
       const { code } = data || {};
       
       const lobby = lobbyService.getLobby(code);
@@ -221,19 +239,21 @@ export function registerLobbySocket(io) {
       
       createGameSession(code, lobby.settings || {}, players);
 
-      io.to(code).emit('lobby:started', {
+      ioOrNamespace.to(code).emit(LOBBY_EVENTS.STARTED, {
         settings: lobby.settings,
         serverNow: now()
       });
       
-      emitLobbyState(io, code);
+      emitLobbyState(ioOrNamespace, code);
+      
+      if (ack) ack({ success: true, gameStarted: true });
     }));
 
     /**
      * lobby:end - Ends the lobby (host only)
      * Payload: { code }
      */
-    socket.on('lobby:end', handleEvent(socket, 'lobby:end', (data) => {
+    socket.on(LOBBY_EVENTS.END, handleEvent(socket, LOBBY_EVENTS.END, (data) => {
       const { code } = data || {};
       
       const lobby = lobbyService.getLobby(code);
@@ -245,24 +265,25 @@ export function registerLobbySocket(io) {
         reason: 'Host ended the lobby'
       });
 
-      io.to(code).emit('lobby:ended', {
+      ioOrNamespace.to(code).emit(LOBBY_EVENTS.ENDED, {
         reason: 'Host ended the lobby'
       });
       
       // Remove all sockets from the room
-      const room = io.sockets.adapter.rooms.get(code);
+      const adapter = ioOrNamespace.adapter || ioOrNamespace.sockets.adapter;
+      const room = adapter.rooms.get(code);
       if (room) {
         for (const socketId of room) {
-          const socket = io.sockets.sockets.get(socketId);
-          if (socket) {
-            socket.leave(code);
+          const socketInRoom = ioOrNamespace.sockets ? ioOrNamespace.sockets.get(socketId) : ioOrNamespace.connected[socketId];
+          if (socketInRoom) {
+            socketInRoom.leave(code);
           }
         }
       }
     }));
 
     socket.on('disconnect', () => {
-      handlePlayerDisconnection(io, socket.id);
+      handlePlayerDisconnection(ioOrNamespace, socket.id);
       
       // Clean up rate limiter
       rateLimiter.delete(socket.id);
@@ -274,7 +295,7 @@ export function registerLobbySocket(io) {
  * @param {*} io - Socket.IO server
  * @param {string} socketId - Disconnected socket ID
  */
-function handlePlayerDisconnection(io, socketId) {
+function handlePlayerDisconnection(ioOrNamespace, socketId) {
   // Find which lobby this player was in
   for (const code of lobbyService.getActiveCodes()) {
     const lobby = lobbyService.getLobby(code);
@@ -293,10 +314,10 @@ function handlePlayerDisconnection(io, socketId) {
             connected: player.connected,
           };
           
-          io.to(code).emit('lobby:playerLeft', { playerPublic });
+          ioOrNamespace.to(code).emit(LOBBY_EVENTS.PLAYER_LEFT, { playerPublic });
         }
         
-        emitLobbyState(io, code);
+        emitLobbyState(ioOrNamespace, code);
       }
       
       break; // Player can only be in one lobby

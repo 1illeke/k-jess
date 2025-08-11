@@ -5,6 +5,7 @@ import { createError, ERROR_CODES } from '../utils/errors.js';
 import { validateCode, validateName, validatePlayerId, validateSettings } from '../utils/validate.js';
 import { now, isOlderThan } from '../utils/time.js';
 import { DEFAULT_SETTINGS, PHASES, TIMING } from '../models/lobby.model.js';
+import { applyStoredColors, generateInitialColorAssignments, assignColorToNewPlayer } from '../utils/colors.js';
 
 class LobbyService {
   constructor() {
@@ -56,7 +57,8 @@ class LobbyService {
       createdAt: currentTime,
       phase: PHASES.LOBBY,
       settings: mergedSettings,
-      players: new Map()
+      players: new Map(),
+      playerColors: {}
     };
 
     // Add host
@@ -67,6 +69,9 @@ class LobbyService {
       joinedAt: currentTime,
       connected: true
     });
+    
+    // Initialize color assignments for host
+    lobby.playerColors = generateInitialColorAssignments([playerId], mergedSettings.randomColors);
 
     this.lobbies.set(code, lobby);
     return code;
@@ -143,6 +148,12 @@ class LobbyService {
     };
 
     lobby.players.set(socketId, player);
+    
+    // Assign color to new player
+    if (!lobby.playerColors[playerId]) {
+      lobby.playerColors[playerId] = assignColorToNewPlayer(playerId, lobby.playerColors, lobby.settings.randomColors);
+    }
+    
     return player;
   }
 
@@ -233,8 +244,16 @@ class LobbyService {
 
     validateSettings(partialSettings);
     
+    const oldRandomColors = lobby.settings.randomColors;
+    
     // Merge settings
     Object.assign(lobby.settings, partialSettings);
+    
+    // Regenerate colors if randomColors setting changed
+    if ('randomColors' in partialSettings && partialSettings.randomColors !== oldRandomColors) {
+      const playerIds = Array.from(lobby.players.values()).map(p => p.playerId);
+      lobby.playerColors = generateInitialColorAssignments(playerIds, partialSettings.randomColors);
+    }
   }
 
   /**
@@ -314,12 +333,14 @@ class LobbyService {
       connected: player.connected,
     }));
 
+    const playersWithColors = applyStoredColors(players, lobby.playerColors);
+
     return {
       code: lobby.code,
       phase: lobby.phase,
       settings: { ...lobby.settings },
       hostPlayerId: host ? host.playerId : null,
-      players
+      players: playersWithColors
     };
   }
 
