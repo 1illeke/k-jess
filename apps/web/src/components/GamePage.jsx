@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { Button, ThemeToggle, TwoPlayerBoard, ThreePlayerBoard, FourPlayerBoard } from './ui'
 import './GamePage.css'
 import { gameSocket, chatSocket, timerSocket } from '../sockets'
@@ -8,6 +8,7 @@ import { LOBBY_EVENTS } from '../../constants/socket-events.js'
 
 function GamePage() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { gameId } = useParams()
   const gameMode = location.state?.gameMode ?? '1v1'
   const playerName = location.state?.playerName || localStorage.getItem('playerName') || 'Player1'
@@ -200,7 +201,18 @@ function GamePage() {
         onEnded: () => {},
         onNavigate: () => {
           setTimeout(() => {
-            window.history.back()
+            if (gameId) {
+              // Navigate to the lobby page for this game
+              navigate(`/lobby/${gameId}`, { 
+                state: { 
+                  playerName,
+                  inviteCode: gameId 
+                } 
+              });
+            } else {
+              // Fallback to home if no gameId
+              navigate('/');
+            }
           }, 300)
         }
       }

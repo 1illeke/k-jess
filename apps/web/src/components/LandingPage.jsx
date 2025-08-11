@@ -1,11 +1,33 @@
 import { useState, useEffect } from 'react'
 import { Button, ThemeToggle, Modal } from './ui'
 import './LandingPage.css'
+import socket from '../sockets/socket'
 
 function LandingPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
   const [selectedInfoSection, setSelectedInfoSection] = useState('General')
   const [isWipModalOpen, setIsWipModalOpen] = useState(false)
+  const [onlineCount, setOnlineCount] = useState(0)
+
+  // Listen for online count updates
+  useEffect(() => {
+    const handleOnlineCountUpdate = ({ onlineCount }) => {
+      setOnlineCount(onlineCount)
+    }
+
+    socket.on('online-count-update', handleOnlineCountUpdate)
+
+    // Fetch initial count
+    const serverUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000'
+    fetch(`${serverUrl}/api/online-count`)
+      .then(res => res.json())
+      .then(data => setOnlineCount(data.onlineCount))
+      .catch(() => {}) // Fail silently
+
+    return () => {
+      socket.off('online-count-update', handleOnlineCountUpdate)
+    }
+  }, [])
 
   // Check if user has seen the WIP modal before
   useEffect(() => {
@@ -107,7 +129,7 @@ function LandingPage() {
         
         <footer className="footer">
           <div className="wireframe-box">
-            <span>Current online players: 0</span>
+            <span>Current online players: {onlineCount}</span>
           </div>
         </footer>
       </div>

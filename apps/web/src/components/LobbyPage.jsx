@@ -20,6 +20,7 @@ function LobbyPage() {
   const [hostPlayerId, setHostPlayerId] = useState(null)
   const [currentPlayerId, setCurrentPlayerId] = useState(null)
   const unsubscribeRef = useRef(null)
+  const currentLobbyCodeRef = useRef(null)
 
   // Get stable player ID
   const getPlayerId = () => {
@@ -47,24 +48,36 @@ function LobbyPage() {
     setCurrentPlayerId(getPlayerId())
   }, [])
 
+  // Keep track of current lobby code
+  useEffect(() => {
+    currentLobbyCodeRef.current = gameId || inviteCode
+  }, [gameId, inviteCode])
+
   useEffect(() => {
     // Persist name 
     localStorage.setItem('playerName', playerName)
   }, [playerName])
 
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (currentLobbyCodeRef.current) {
+        lobbySocket.leaveLobby({ code: currentLobbyCodeRef.current })
+      }
+    }
+  }, []) // Empty deps - only run on unmount
+
   // unload handle
   useEffect(() => {
     const handleBeforeUnload = (event) => {
-      const code = gameId || inviteCode
-      if (code) {
-        // i swear to god this does nothing
-        lobbySocket.leaveLobby({ code })
+      if (currentLobbyCodeRef.current) {
+        lobbySocket.leaveLobby({ code: currentLobbyCodeRef.current })
       }
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [gameId, inviteCode])
+  }, [])
 
   useEffect(() => {
     // Auto-open lobby if there's a code in the URL or state
@@ -148,8 +161,8 @@ function LobbyPage() {
         unsubscribeRef.current()
         unsubscribeRef.current = null
       }
-      const code = gameId || inviteCode
-      if (code) lobbySocket.leaveLobby({ code })
+      // Only leave lobby on actual component unmount, not on state changes
+      // We'll handle leaving in the beforeunload effect instead
     }
   }, [showLobby, gameId, inviteCode, playerName])
 
@@ -196,10 +209,29 @@ function LobbyPage() {
               .then(() => alert(`Invite link copied to clipboard!\n${inviteLink}`))
               .catch(() => alert(`Invite code generated: ${code}\nLink: ${inviteLink}`))
             
-            // After creating lobby, we need to join it to listen for updates
-            // This will be handled by the useEffect that listens for inviteCode changes
+            // Update URL without navigation to avoid component unmount/remount
+            window.history.replaceState({ playerName, inviteCode: code }, '', `/lobby/${code}`)
           },
           onError: (err) => alert(err?.message || 'Failed to create lobby'),
+          onPlayers: (players) => {
+            setLobbyPlayers(players)
+          },
+          onLobbyState: (lobbyPublic) => {
+            const players = lobbyPublic.players?.map(player => ({
+              id: player.playerId,
+              name: player.name,
+              connected: player.connected,
+              color: player.color
+            })) || []
+            
+            setLobbyPlayers(players)
+            setHostPlayerId(lobbyPublic.hostPlayerId)
+            if (lobbyPublic.settings) {
+              const frontendMode = getModeFromMaxPlayers(lobbyPublic.settings.maxPlayers || 4)
+              setGameMode(frontendMode)
+              setRandomColors(lobbyPublic.settings.randomColors || false)
+            }
+          }
         }
       )
       unsubscribeRef.current = unsub

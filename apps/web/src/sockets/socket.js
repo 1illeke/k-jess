@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client'
 import { LOBBY_EVENTS, CONNECTION_EVENTS } from '../../constants/socket-events.js'
 
-const DEFAULT_URL = 'http://localhost:3001' // need to change for prod
+const DEFAULT_URL = 'http://localhost:4000' // Backend default port
 const SOCKET_URL = import.meta?.env?.VITE_SOCKET_URL ?? DEFAULT_URL
 
 const LAST_ROOM_KEY = 'kjess:lastRoom'
