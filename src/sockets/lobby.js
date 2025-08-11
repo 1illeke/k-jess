@@ -1,4 +1,5 @@
 import socket, { saveLastRoom } from './socket.js'
+import { LOBBY_EVENTS } from '../../constants/socket-events.js'
 
 // get stable player ID
 function getPlayerId() {
@@ -26,21 +27,21 @@ export function createLobby({ playerName }, { onCreated, onError, onPlayers } = 
   const handleError = (err) => onError?.(err);
 
   // only use ACK callback for creation, dont listen to lobby:state for creation
-  socket.emit('lobby:create', { playerId, name: playerName }, (response) => {
+  socket.emit(LOBBY_EVENTS.CREATE, { playerId, name: playerName }, (response) => {
     if (response?.code && onCreated) {
       onCreated({ code: response.code });
       saveLastRoom({ code: response.code, playerName });
     }
   });
 
-  socket.on('lobby:error', handleError);
+  socket.on(LOBBY_EVENTS.ERROR, handleError);
 
   return () => {
-    socket.off('lobby:error', handleError);
+    socket.off(LOBBY_EVENTS.ERROR, handleError);
   };
 }
 
-export function joinLobby({ code, playerName }, { onPlayers, onError, onLobbyState } = {}) {
+export function joinLobby({ code, playerName }, { onPlayers, onError, onLobbyState, onJoined } = {}) {
   const playerId = getPlayerId();
   
   const handleState = (data) => {
@@ -69,18 +70,25 @@ export function joinLobby({ code, playerName }, { onPlayers, onError, onLobbySta
 
   saveLastRoom({ code, playerName });
   
-  socket.emit('lobby:join', { code, playerId, name: playerName });
+  // Use acknowledgement for better error handling
+  socket.emit(LOBBY_EVENTS.JOIN, { code, playerId, name: playerName }, (response) => {
+    if (response?.success) {
+      onJoined?.({ success: true, player: response.player });
+    } else {
+      onError?.({ reason: 'JOIN_FAILED', details: response?.error || 'Failed to join lobby' });
+    }
+  });
   
-  socket.on('lobby:state', handleState);
-  socket.on('lobby:playerJoined', handlePlayerJoined);
-  socket.on('lobby:playerLeft', handlePlayerLeft);
-  socket.on('lobby:error', handleError);
+  socket.on(LOBBY_EVENTS.STATE, handleState);
+  socket.on(LOBBY_EVENTS.PLAYER_JOINED, handlePlayerJoined);
+  socket.on(LOBBY_EVENTS.PLAYER_LEFT, handlePlayerLeft);
+  socket.on(LOBBY_EVENTS.ERROR, handleError);
 
   return () => {
-    socket.off('lobby:state', handleState);
-    socket.off('lobby:playerJoined', handlePlayerJoined);
-    socket.off('lobby:playerLeft', handlePlayerLeft);
-    socket.off('lobby:error', handleError);
+    socket.off(LOBBY_EVENTS.STATE, handleState);
+    socket.off(LOBBY_EVENTS.PLAYER_JOINED, handlePlayerJoined);
+    socket.off(LOBBY_EVENTS.PLAYER_LEFT, handlePlayerLeft);
+    socket.off(LOBBY_EVENTS.ERROR, handleError);
   };
 }
 
@@ -93,11 +101,11 @@ export function updateSettings({ code, settings }, { onError } = {}) {
     randomColors: settings.randomColors
   };
   
-  socket.emit('lobby:updateSettings', { code, partialSettings: backendSettings });
-  socket.on('lobby:error', handleError);
+  socket.emit(LOBBY_EVENTS.UPDATE_SETTINGS, { code, partialSettings: backendSettings });
+  socket.on(LOBBY_EVENTS.ERROR, handleError);
   
   setTimeout(() => {
-    socket.off('lobby:error', handleError);
+    socket.off(LOBBY_EVENTS.ERROR, handleError);
   }, 5000);
 }
 
@@ -113,7 +121,7 @@ function getMaxPlayersFromMode(mode) {
 export function updatePlayerName({ code, name }, { onError } = {}) {
   // Player name updates are handled through lobby:join with updated name
   const playerId = getPlayerId();
-  socket.emit('lobby:join', { code, playerId, name });
+  socket.emit(LOBBY_EVENTS.JOIN, { code, playerId, name });
 }
 
 export function listenLobby({ onPlayers, onSettings } = {}) {
@@ -145,14 +153,14 @@ export function listenLobby({ onPlayers, onSettings } = {}) {
 
   // Only listen for settings, not state (to avoid conflicts with join/create)
   if (onSettings) {
-    socket.on('lobby:state', handleState);
-    socket.on('lobby:settingsUpdated', handleSettingsUpdated);
+    socket.on(LOBBY_EVENTS.STATE, handleState);
+    socket.on(LOBBY_EVENTS.SETTINGS_UPDATED, handleSettingsUpdated);
   }
 
   return () => {
     if (onSettings) {
-      socket.off('lobby:state', handleState);
-      socket.off('lobby:settingsUpdated', handleSettingsUpdated);
+      socket.off(LOBBY_EVENTS.STATE, handleState);
+      socket.off(LOBBY_EVENTS.SETTINGS_UPDATED, handleSettingsUpdated);
     }
   };
 }
@@ -167,20 +175,28 @@ function getModeFromMaxPlayers(maxPlayers) {
 }
 
 export function leaveLobby({ code }) {
-  socket.emit('lobby:leave', { code });
+  socket.emit(LOBBY_EVENTS.LEAVE, { code });
 }
 
 export function startGame({ code }, { onStarted, onError } = {}) {
   const handleStarted = (data) => onStarted?.(data);
   const handleError = (err) => onError?.(err);
 
-  socket.emit('lobby:startGame', { code });
-  socket.on('lobby:started', handleStarted);
-  socket.on('lobby:error', handleError);
+  // Use acknowledgement for immediate feedback
+  socket.emit(LOBBY_EVENTS.START_GAME, { code }, (response) => {
+    if (response?.success) {
+      // Game start confirmed by server
+    } else {
+      onError?.({ reason: 'START_FAILED', details: response?.error || 'Failed to start game' });
+    }
+  });
+  
+  socket.on(LOBBY_EVENTS.STARTED, handleStarted);
+  socket.on(LOBBY_EVENTS.ERROR, handleError);
 
   // Clean up listeners
   setTimeout(() => {
-    socket.off('lobby:started', handleStarted);
-    socket.off('lobby:error', handleError);
+    socket.off(LOBBY_EVENTS.STARTED, handleStarted);
+    socket.off(LOBBY_EVENTS.ERROR, handleError);
   }, 10000);
 }

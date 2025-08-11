@@ -7,6 +7,7 @@ import { lobbyService } from '../services/lobby.service.js';
 import { toErrorResponse } from '../utils/errors.js';
 import { validatePayloadSize } from '../utils/validate.js';
 import { now } from '../utils/time.js';
+import { applyStoredColors } from '../utils/colors.js';
 
 const router = Router();
 
@@ -107,9 +108,10 @@ router.get('/admin/lobbies', (req, res) => {
         lobbyData.hostPlayerId = host.playerId;
       }
 
-      // Get all players
+      // Get all players with color assignments
+      const playersWithoutColors = [];
       for (const player of lobby.players.values()) {
-        lobbyData.players.push({
+        playersWithoutColors.push({
           playerId: player.playerId,
           socketId: player.socketId,
           name: player.name,
@@ -118,6 +120,10 @@ router.get('/admin/lobbies', (req, res) => {
           disconnectedAt: player.disconnectedAt || null,
         });
       }
+      
+      // Apply color assignments
+      const playersWithColors = applyStoredColors(playersWithoutColors, lobby.playerColors || {});
+      lobbyData.players = playersWithColors;
 
       allLobbies.push(lobbyData);
     }

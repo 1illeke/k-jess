@@ -116,13 +116,18 @@ function LobbyPage() {
     }
 
     const handlers = {
-      onPlayers: (players) => setLobbyPlayers(players),
+      onPlayers: (players) => {
+        setLobbyPlayers(players)
+      },
       onLobbyState: (lobbyPublic) => {
-        setLobbyPlayers(lobbyPublic.players?.map(player => ({
+        const players = lobbyPublic.players?.map(player => ({
           id: player.playerId,
           name: player.name,
           connected: player.connected,
-        })) || [])
+          color: player.color // Color is already assigned server-side
+        })) || []
+        
+        setLobbyPlayers(players)
         setHostPlayerId(lobbyPublic.hostPlayerId)
         if (lobbyPublic.settings) {
           const frontendMode = getModeFromMaxPlayers(lobbyPublic.settings.maxPlayers || 4)

@@ -27,6 +27,7 @@
  * @property {"lobby"|"in_game"|"ended"} phase - Current lobby phase
  * @property {LobbySettings} settings - Lobby configuration
  * @property {Map<string, Player>} players - Map of socket ID to player data
+ * @property {Object.<string, string>} playerColors - Map of playerId to color assignments
  */
 
 /**
