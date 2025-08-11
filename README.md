@@ -1,197 +1,183 @@
-# Web Game Monorepo
+<img src="apps/web/public/kjess.png" alt="Web Game Header" width="100%" />
 
-A multiplayer game application split into frontend (React/Vite) and backend (Express/Socket.IO) for deployment to Vercel and Railway respectively.
+<div align="center">
 
-## Architecture
+# K/Jess
 
-- **Frontend** (`/apps/web`): React app deployed to Vercel
-- **Backend** (`/apps/server`): Express + Socket.IO server deployed to Railway
-- **Monorepo**: npm workspaces for unified development
+An online real‑time multiplayer game built with React (Vite) and Node.js (Express + Socket.IO). Designed for smooth 60 FPS DOM animations, accessible over the internet, and easy to run locally.
 
-## Local Development
+<br/>
+
+<!-- Tech badges -->
+<a href="https://nodejs.org/"><img alt="Node.js" src="https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white"></a>
+<a href="https://react.dev/"><img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=0A0A0A"></a>
+<a href="https://vitejs.dev/"><img alt="Vite" src="https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white"></a>
+<a href="https://expressjs.com/"><img alt="Express" src="https://img.shields.io/badge/Express-4-000000?logo=express&logoColor=white"></a>
+<a href="https://socket.io/"><img alt="Socket.IO" src="https://img.shields.io/badge/Socket.IO-4-010101?logo=socketdotio&logoColor=white"></a>
+<a href="https://vercel.com/"><img alt="Vercel" src="https://img.shields.io/badge/Frontend-Vercel-000000?logo=vercel&logoColor=white"></a>
+<a href="https://railway.app/"><img alt="Railway" src="https://img.shields.io/badge/Backend-Railway-0B0D0E?logo=railway&logoColor=white"></a>
+<a href="#"><img alt="Monorepo" src="https://img.shields.io/badge/Workspace-Monorepo-7849ff?logo=npm&logoColor=white"></a>
+
+<br/>
+
+</div>
+
+---
+
+**[ WARNING ]** This project is still in active development. Some features may not work yet or have not been added.
+
+## Table of Contents
+
+- What is this?
+- Tech Stack
+- How it works
+- Project constraints
+- Local development
+- Environment variables
+- Project structure
+- Scripts
+
+## What is this?
+
+This is a Multiplayer Real‑Time Strategy (MP‑RTS) chess game where speed and strategy collide. Unlike traditional turn‑based chess, K/Jess allows all players to move simultaneously. Pieces follow normal chess rules but actions are gated by cooldowns, rewarding fast thinking and precise execution. Play with 2–4 players in chaotic real‑time battles.
+
+Modes:
+- 2 Player: Classic board with simultaneous movement and cooldowns for intense 1v1 duels.
+- 3 Player: Tri-board variant; pawns advance straight, creating two attack fronts to manage.
+- 4 Player: Cross‑shaped board; multi‑front combat with a contested center.
+
+## Tech Stack
+
+- React 19 + Vite
+- Node.js 18+, Express 4
+- Socket.IO 4 (real‑time transport)
+- Monorepo via npm workspaces
+- Vercel (frontend) + Railway (backend)
+
+## How it works
+
+- Lobby creation and joining are handled via Socket.IO namespaces/rooms.
+- The backend (`apps/server`) maintains lobby state, validates actions, and broadcasts updates.
+- The frontend (`apps/web`) renders everything with DOM elements and subscribes to server events.
+- Real‑time updates propagate instantly to all connected clients.
+- Animations and game loops use `requestAnimationFrame` for smooth 60 FPS.
+
+### Key socket events
+
+Client → Server
+- `lobby:create` – Create a new lobby
+- `lobby:join` – Join an existing lobby
+- `lobby:leave` – Leave the current lobby
+- `lobby:updateSettings` – Host‑only settings updates
+- `lobby:startGame` – Host starts the game
+- `lobby:end` – Host ends the lobby
+
+Server → Client
+- `lobby:state` – Full lobby state snapshot
+- `lobby:settingsUpdated` – Settings changed
+- `lobby:started` – Game started
+- `lobby:ended` – Lobby ended
+- `lobby:error` – Error messages
+
+## Project constraints (design guidelines)
+
+- DOM elements only for rendering; canvas is not used.
+- 2–4 players, real‑time (not turn‑based) with equal playable characters.
+- Smooth 60 FPS animations using `requestAnimationFrame`.
+- In‑game menu: pause/resume/quit, scoring with real‑time updates, and game timer.
+- Keyboard controls and sound effects.
+- Accessible over the internet; players can join via a URL and unique name.
+
+## Local development
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - npm 7+
 
-### Setup
+### Install
 
-1. **Clone and install dependencies:**
-   ```bash
-   git clone <repo-url>
-   cd web-game
-   npm install
-   ```
+```bash
+git clone <repo-url>
+cd web-game
+npm install
+```
 
-2. **Set up environment variables:**
-   ```bash
-   # Frontend
-   cp apps/web/.env.example apps/web/.env
-   
-   # Backend  
-   cp apps/server/.env.example apps/server/.env
-   ```
+### Configure environment
 
-3. **Start development servers:**
-   ```bash
-   # Terminal 1: Start backend (port 4000)
-   npm run server
-   
-   # Terminal 2: Start frontend (port 5173)
-   npm run dev
-   ```
+Create the following files with your local values:
 
-4. **Test the application:**
-   - Open http://localhost:5173
-   - Create a lobby and test real-time functionality
-   - Open multiple browser windows to test multiplayer features
-
-## Environment Variables
-
-### Frontend (`apps/web/.env`)
+Frontend `apps/web/.env`
 ```env
 VITE_SOCKET_URL=http://localhost:4000
 ```
 
-### Backend (`apps/server/.env`)
+Backend `apps/server/.env`
 ```env
 PORT=4000
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+CORS_ORIGINS=http://localhost:5173
 ```
 
-## Deployment
+### Run
 
-### Vercel (Frontend)
+Open two terminals:
 
-1. **Setup:**
-   - Connect your repo to Vercel
-   - Set root directory to `apps/web`
-   - Framework preset: Vite
+Terminal 1 (backend – port 4000)
+```bash
+npm run server
+```
 
-2. **Environment Variables:**
-   ```
-   VITE_SOCKET_URL=https://your-railway-backend.railway.app
-   ```
+Terminal 2 (frontend – port 5173)
+```bash
+npm run dev
+```
 
-3. **Build Settings:**
-   - Build command: `npm run build`
-   - Output directory: `dist`
+Then visit `http://localhost:5173` and open multiple browser windows to test multiplayer.
+- Note: Multiplayer on the same device and same browser may not work correctly. Either use different browsers or incognito tabs.
 
-### Railway (Backend)
-
-1. **Setup:**
-   - Connect your repo to Railway
-   - Set root directory to `apps/server`
-   - Runtime: Node.js
-
-2. **Environment Variables:**
-   ```
-   PORT=(automatically set by Railway)
-   CORS_ORIGINS=https://your-vercel-app.vercel.app,http://localhost:5173
-   ```
-
-3. **Health Check:**
-   - Railway will use `/health` endpoint
-   - Returns server status and lobby count
-
-## Features
-
-### Lobby System
-- Create/join lobbies with 5-digit codes
-- Real-time player presence
-- Host controls (settings, game start)
-- Auto-reconnection support
-- Persistent color assignments
-
-### Socket Events
-
-**Client → Server:**
-- `lobby:create` - Create new lobby
-- `lobby:join` - Join existing lobby  
-- `lobby:leave` - Leave current lobby
-- `lobby:updateSettings` - Update lobby settings (host only)
-- `lobby:startGame` - Start the game (host only)
-- `lobby:end` - End the lobby (host only)
-
-**Server → Client:**
-- `lobby:state` - Full lobby state updates
-- `lobby:settingsUpdated` - Settings change notifications
-- `lobby:started` - Game start notification
-- `lobby:ended` - Lobby end notification
-- `lobby:error` - Error messages
-
-## Acceptance Tests
-
-### Local Development ✅
-- [ ] `npm run dev` starts frontend on port 5173
-- [ ] `npm run server` starts backend on port 4000
-- [ ] Creating lobby works across browser windows
-- [ ] Joining lobby shows real-time updates
-- [ ] Player disconnect/reconnect updates presence
-- [ ] Empty lobbies are cleaned up
-- [ ] Host controls work (settings, start game)
-
-### Production Deployment ✅
-- [ ] Frontend connects to Railway WebSocket URL
-- [ ] No CORS errors in browser console
-- [ ] Lobby creation/joining works in production
-- [ ] Railway health check returns 200 status
-- [ ] Vercel SPA routing works (refresh on any route)
-
-### Code Quality ✅
-- [ ] No changes to existing UI component logic
-- [ ] Board components unchanged (`src/components/ui/boards/`)
-- [ ] SVG assets preserved exactly
-- [ ] Only import paths updated for monorepo structure
-- [ ] All socket event names preserved
-- [ ] Data shapes consistent with original
-
-## Project Structure
+## Project structure
 
 ```
 web-game/
 ├── apps/
-│   ├── web/                  # React frontend
+│   ├── web/                  # React frontend (Vite)
 │   │   ├── src/
 │   │   ├── public/
 │   │   ├── package.json
 │   │   ├── vite.config.js
 │   │   └── vercel.json
-│   └── server/               # Express backend
+│   └── server/               # Express + Socket.IO backend
 │       ├── services/
 │       ├── constants/
 │       ├── server.js
 │       └── package.json
-├── package.json              # Root workspace config
+├── package.json              # Root npm workspace config
 └── README.md
+```
+
+## Environment variables
+
+Frontend (`apps/web/.env`)
+```env
+VITE_SOCKET_URL=http://localhost:4000
+```
+
+Backend (`apps/server/.env`)
+```env
+PORT=4000
+CORS_ORIGINS=http://localhost:5173
 ```
 
 ## Scripts
 
+Root level
 ```bash
-# Root level commands
-npm run dev        # Start frontend development server
-npm run server     # Start backend server
+npm run dev        # Start frontend (apps/web)
+npm run server     # Start backend (apps/server)
 npm run build      # Build frontend for production
+```
 
-# Workspace specific
+Workspace specific
+```bash
 npm run dev --workspace=apps/web
 npm run start --workspace=apps/server
 ```
-
-## Troubleshooting
-
-### Connection Issues
-- Verify CORS_ORIGINS includes your frontend URL
-- Check Socket.IO transports in browser network tab
-- Ensure backend health check responds at `/health`
-
-### Local Development
-- Backend must start before frontend for proper connection
-- Clear browser localStorage if seeing stale lobby data
-- Check both .env files have correct values
-
-### Deployment  
-- Verify environment variables are set in both platforms
-- Check Railway logs for CORS/connection errors
-- Confirm Vercel build uses correct VITE_SOCKET_URL
