@@ -18,8 +18,12 @@ function LandingPage() {
     socket.on('online-count-update', handleOnlineCountUpdate)
 
     // Fetch initial count
-    const serverUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000'
-    fetch(`${serverUrl}/api/online-count`)
+    // In development, use proxy (same origin). In production, use environment variable
+    const apiUrl = import.meta.env.DEV 
+      ? '/api/online-count'  // Uses vite proxy in development
+      : `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000'}/api/online-count`
+    
+    fetch(apiUrl)
       .then(res => res.json())
       .then(data => setOnlineCount(data.onlineCount))
       .catch(() => {}) // Fail silently
