@@ -20,6 +20,8 @@ An online real‑time multiplayer game built with React (Vite) and Node.js (Expr
 
 <br/>
 
+<a href="https://k-jess.lilleke.eu"><img alt="Play Online" src="https://img.shields.io/badge/Play%20Online-k--jess.lilleke.eu-1f883d?logo=google-chrome&logoColor=white"></a>
+
 </div>
 
 ---
