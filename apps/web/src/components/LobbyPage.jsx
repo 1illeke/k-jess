@@ -203,7 +203,7 @@ function LobbyPage() {
           onCreated: ({ code }) => {
             setInviteCode(code)
             setShowLobby(true)
-            const inviteLink = `www.kjess.lilleke.eu/invite/${code}`
+            const inviteLink = `${window.location.host}/invite/${code}`
             navigator.clipboard
               .writeText(inviteLink)
               .then(() => alert(`Invite link copied to clipboard!\n${inviteLink}`))
@@ -236,7 +236,7 @@ function LobbyPage() {
       )
       unsubscribeRef.current = unsub
     } else {
-      const inviteLink = `www.kjess.lilleke.eu/invite/${inviteCode}`
+      const inviteLink = `${window.location.host}/invite/${inviteCode}`
       navigator.clipboard
         .writeText(inviteLink)
         .then(() => alert(`Invite link copied to clipboard!\n${inviteLink}`))
