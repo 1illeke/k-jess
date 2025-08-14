@@ -75,15 +75,13 @@ export default function TwoPlayerBoard({
   }, [selected, cooldownMs, now, disabled])
 
   return (
+		<>
     <div
       className="chess-board"
       role="grid"
-      aria-label="Chess board"
       data-orientation={orientation}
       data-disabled={disabled || undefined}
     >
-      {/* Squares layer (stable grid) */}
-      <div className="board-grid">
         {boardSquares.map((sq) => {
           const file = FILES.indexOf(sq[0])
           const rank = Number(sq[1]) - 1
@@ -112,7 +110,6 @@ export default function TwoPlayerBoard({
         })}
       </div>
 
-      {/* Pieces layer (absolute, animates with top/left %) */}
       <div className="pieces-layer" aria-hidden={false}>
         {pieces.map((p) => {
           const { leftPct, topPct } = squareToPct(p.square, orientation)
@@ -128,18 +125,17 @@ export default function TwoPlayerBoard({
               className={['chess-piece', p.color, isSelected ? 'is-selected' : ''].filter(Boolean).join(' ')}
               style={{ left: `${leftPct}%`, top: `${topPct}%`, ['--cdw']: `${(progress * 100).toFixed(1)}%` }}
               onClick={() => onPieceClick(p)}
-              aria-label={`${p.color} ${p.type} on ${p.square}`}
               data-square={p.square}
               data-piece-id={p.id}
               disabled={disabled}
             >
               {renderPiece ? renderPiece(p) : (p.svg ?? <span className="fallback-glyph">♟</span>)}
               {/* Cooldown bar (width via --cdw) */}
-              <div className="cd" aria-hidden="true" />
+              <div className="cd" />
             </button>
           )
         })}
       </div>
-    </div>
+		</>
   )
 }

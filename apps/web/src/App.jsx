@@ -6,7 +6,7 @@ function App() {
   return (
     <Router>
       <div className="App">
-                <Routes>
+				<Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/invite/:inviteCode" element={<InvitationPage />} />
           <Route path="/lobby" element={<LobbyPage />} />
