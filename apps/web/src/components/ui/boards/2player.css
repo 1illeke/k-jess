@@ -1,13 +1,17 @@
 /* 2 player board */
 .chess-board {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  grid-template-rows: repeat(8, 1fr);
   border: 3px solid var(--border-color);
   position: relative;
   width: calc(100vh - 200px);
   height: calc(100vh - 200px);
   aspect-ratio: 1;
+	position: relative;
+}
+
+.chess-squares {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
 }
 
 .chess-board::before {
@@ -43,3 +47,19 @@
 .chess-square:hover {
   background: var(--accent-border);
 } 
+
+.chess-piece {
+	aspect-ratio: 1;
+	position: absolute;
+	width: 12.5%;
+	height: 12.5%;
+}
+
+.move {
+	background-color: #228822;
+	opacity: 0.6;
+	aspect-ratio: 1;
+	position: absolute;
+	width: 12.5%;
+	height: 12.5%;
+}
