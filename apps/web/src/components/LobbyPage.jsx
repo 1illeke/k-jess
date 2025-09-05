@@ -32,7 +32,7 @@ function LobbyPage() {
     return playerId;
   }
 
-  // convwert maxPlayers back to frontend mode
+  // convert maxPlayers back to frontend mode
   const getModeFromMaxPlayers = (maxPlayers) => {
     switch (maxPlayers) {
       case 2: return '1v1'
@@ -187,6 +187,7 @@ function LobbyPage() {
       },
       onError: (err) => alert(err?.message || 'Failed to start game'),
     })
+		
   }
 
   const handleInviteFriends = async () => {

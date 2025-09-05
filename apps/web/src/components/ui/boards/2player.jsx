@@ -1,141 +1,173 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import './2player.css'
+import * as chess from '../../../chess.js'
 
-const FILES = 'abcdefgh'
-const SQUARES = (() => {
-  const out = []
-  for (let r = 8; r >= 1; r--) {
-    for (let f = 0; f < 8; f++) out.push(`${FILES[f]}${r}`)
-  }
-  return out
-})()
 
-/** Convert "e4" -> {leftPct, topPct} (0..100) for absolute positioning */
-function squareToPct(square, orientation = 'white') {
-  const file = FILES.indexOf(square[0])
-  const rank = Number(square[1]) - 1
-  const col = orientation === 'white' ? file : 7 - file
-  const row = orientation === 'white' ? 7 - rank : rank
-  const step = 12.5 // 100 / 8
-  return { leftPct: col * step, topPct: row * step }
-}
+export default function TwoPlayerBoard({}) {
+  const [selected, setSelected] = useState(null)
 
-/**
- * Game‑ready DOM chess board.
- * Props:
- *  - pieces: Array<{ id, type, color: 'white'|'black'|'teamA'|'teamB', square: 'a1'..'h8', svg?: ReactNode, cooldownEndsAt?: number, cooldownMs?: number }>
- *  - onMove: ({ pieceId, from, to }) => void
- *  - orientation: 'white' | 'black'
- *  - highlights: Set<string> of squares (e.g., possible moves)
- *  - lastMove: { from: string, to: string } | null
- *  - disabled: boolean (disable interactions)
- *  - cooldownMs: number (default for pieces)
- *  - renderPiece?: (piece) => ReactNode (override piece rendering)
- */
-export default function TwoPlayerBoard({
-  pieces = [],
-  onMove,
-  orientation = 'white',
-  highlights = new Set(),
-  lastMove = null,
-  disabled = false,
-  cooldownMs = 3000,
-  renderPiece,
-}) {
-  const [selected, setSelected] = useState(null) // {pieceId, square}
+	let orientation = chess.Orientation.BOTTOM
 
-  // Drive lightweight cooldown animations without canvas
-  const [now, setNow] = useState(Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 100) // ~10fps UI refresh
-    return () => clearInterval(id)
-  }, [])
+	let square_lookup = {}
+	const squares = []
+	{
+		for (let r = 0; r < 8; r++) {
+			let rank = []
+			for (let f = 0; f < 8; f++) {
+				let name = chess.getSquare(orientation, [f,r])
+				square_lookup[name] = [f,r]
+				rank.push({
+					position: [f,r],
+					name, 
+					white: (r+f)%2==0
+				})
+			}
+			squares.push(rank)
+		}
+	}
 
-  const boardSquares = useMemo(() => SQUARES, [])
+	const [pieces, setPieces] = useState({
+		...chess.spawnPieces(chess.Orientation.BOTTOM),
+		...chess.spawnPieces(chess.Orientation.TOP),
+		c4:{
+			square:"c4",
+			team:chess.Orientation.TOP,
+			type:chess.Piece.ROOK
+		}
+	})
 
-  const onSquareClick = useCallback((square) => {
-    if (disabled) return
-    if (selected) {
-      if (selected.square !== square) {
-        onMove?.({ pieceId: selected.pieceId, from: selected.square, to: square })
-      }
-      setSelected(null)
-    }
-  }, [selected, onMove, disabled])
+	// TODO needs to account for corners on 4v4
+	const in_bounds = v => Boolean(squares[v[0]] && squares[v[0]][v[1]])
+	const square_is_free = v => Boolean(in_bounds(v) && !pieces[chess.getSquare(orientation, v)])
+	const square_is_enemy = v => Boolean(in_bounds(v) && pieces[chess.getSquare(orientation, v)]?.team !== orientation)
 
-  const onPieceClick = useCallback((piece) => {
-    if (disabled) return
-    // prevent selecting a piece that is cooling down (optional UI guard; server still authoritative)
-    const cdMs = piece.cooldownMs ?? cooldownMs
-    const remaining = piece.cooldownEndsAt ? Math.max(0, piece.cooldownEndsAt - now) : 0
-    if (remaining > 0) return
+	let moves = []
+	if (selected) {
+		let origin = square_lookup[selected.square]
 
-    if (selected?.pieceId === piece.id) setSelected(null)
-    else setSelected({ pieceId: piece.id, square: piece.square })
-  }, [selected, cooldownMs, now, disabled])
+		function check(v, push_on_empty = true, push_on_enemy = true) {
+			const p = chess.add(origin, v)
 
-  return (
-		<>
-    <div
-      className="chess-board"
-      role="grid"
-      data-orientation={orientation}
-      data-disabled={disabled || undefined}
-    >
-        {boardSquares.map((sq) => {
-          const file = FILES.indexOf(sq[0])
-          const rank = Number(sq[1]) - 1
-          const isLight = (file + rank) % 2 === 0
-          const sel = selected && selected.square === sq
-          const isFrom = lastMove?.from === sq
-          const isTo = lastMove?.to === sq
-          const highlighted = highlights?.has?.(sq)
-          return (
-            <div
-              key={sq}
-              role="gridcell"
-              tabIndex={0}
-              className={[
-                'chess-square',
-                isLight ? 'light' : 'dark',
-                sel ? 'selected' : '',
-                isFrom ? 'last-from' : '',
-                isTo ? 'last-to' : '',
-                highlighted ? 'highlight' : '',
-              ].filter(Boolean).join(' ')}
-              data-square={sq}
-              onClick={() => onSquareClick(sq)}
-            />
-          )
-        })}
-      </div>
+			if (square_is_free(p)) {
+				if (push_on_empty) moves.push(p)
+				return true
+			}
 
-      <div className="pieces-layer" aria-hidden={false}>
-        {pieces.map((p) => {
-          const { leftPct, topPct } = squareToPct(p.square, orientation)
-          // cooldown progress 0..1 (1 = ready)
-          const cdMs = p.cooldownMs ?? cooldownMs
-          const remaining = p.cooldownEndsAt ? Math.max(0, p.cooldownEndsAt - now) : 0
-          const progress = 1 - Math.min(1, remaining / Math.max(1, cdMs))
-          const isSelected = selected?.pieceId === p.id
+			if (square_is_enemy(p)) {
+				if (push_on_enemy) moves.push(p)
+			}
+			return false
+		}
 
-          return (
-            <button
-              key={p.id}
-              className={['chess-piece', p.color, isSelected ? 'is-selected' : ''].filter(Boolean).join(' ')}
-              style={{ left: `${leftPct}%`, top: `${topPct}%`, ['--cdw']: `${(progress * 100).toFixed(1)}%` }}
-              onClick={() => onPieceClick(p)}
-              data-square={p.square}
-              data-piece-id={p.id}
-              disabled={disabled}
-            >
-              {renderPiece ? renderPiece(p) : (p.svg ?? <span className="fallback-glyph">♟</span>)}
-              {/* Cooldown bar (width via --cdw) */}
-              <div className="cd" />
-            </button>
-          )
-        })}
-      </div>
-		</>
-  )
+		switch (selected.type) {
+			case chess.Piece.PAWN:
+				check([0,-1], true, false) && !selected.hasMoved && check([0,-2], true, false)
+				check([1,-1], false, true)
+				check([-1,-1], false, true)
+				break
+			case chess.Piece.ROOK:
+				for (let dir of [[0,1],[1,0],[-1,0],[0,-1]]) {
+					let range = 1
+					while (check(chess.mul(dir, range))) {
+						range += 1
+					}
+				}
+				break
+			case chess.Piece.BISHOP:
+				for (let dir of [[-1,1],[1,-1],[-1,-1],[1,1]]) {
+					let range = 1
+					while (check(chess.mul(dir, range))) {
+						range += 1
+					}
+				}
+				break
+			case chess.Piece.QUEEN:
+				for (let dir of [[-1,1],[1,-1],[-1,-1],[1,1],[0,1],[1,0],[-1,0],[0,-1]]) {
+					let range = 1
+					while (check(chess.mul(dir, range))) {
+						range += 1
+					}
+				}
+				break
+			case chess.Piece.KING:
+				for (let dir of [[-1,1],[1,-1],[-1,-1],[1,1],[0,1],[1,0],[-1,0],[0,-1]]) {
+					let range = 1
+					check(chess.mul(dir, range))
+				}
+				break
+			case chess.Piece.KNIGHT:
+				for (let point of [[1,2],[1,-2],[2,1],[2,-1]]) {
+					check(point)
+					check(chess.neg(point))
+				}
+				break
+		}
+	}
+	const clamp = (n, min, max) => Math.min(Math.max(n, min),max)
+
+	async function frame() {
+		return
+		// https://x.com/its_bvisness/status/1960370065284460550
+		while (true) {
+			await new Promise(requestAnimationFrame)
+			pieces.map(() => {
+				if (!piece.target) return piece
+
+				return piece
+			})
+			setPieces(pieces)
+		}
+	}
+	useEffect(()=>{frame()}, [])
+
+  return <div className="chess-board">
+			<div className="chess-squares">
+			{squares.flat().map((square, i) => {
+				return (<div
+				key={i}
+				className={[ 'chess-square', square.white ? 'light' : 'dark'
+				].filter(Boolean).join(' ')}>
+					{square.name}
+				</div>)
+			})}
+			</div>
+
+			{Object.keys(pieces).map(square => {
+				const p = pieces[square]
+				const click = () => {
+					if (selected?.square === square) {
+						setSelected(null)
+					} else {
+						setSelected(p)
+					}
+				}
+
+				let [x, y] = square_lookup[p.square]
+				return (<img
+					onClick={click}
+					src={chess.filenames[p.team][p.type]}
+					key={square}
+					className={`chess-piece ${selected?.square === square? 'selected':''}`}
+					style={{ left: `${x*12.5}%`, top: `${y*12.5}%`}}
+				/>)
+			})}
+
+			{moves.map((m,i) => {
+				const click = () => {
+					setPieces(prev => {
+						prev[selected.square].target = m
+						prev.start = performance.now()
+						prev.end = performance.now() + 3000
+						return prev
+					})
+				}
+				const [x, y] = m
+				return <div
+					onClick={click}
+					key={i}
+					className="move"
+					style={{ left: `${x*12.5}%`, top: `${y*12.5}%` }}
+					/>
+			})}
+		</div>
 }
