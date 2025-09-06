@@ -16,44 +16,42 @@ export const Piece = {
 
 export let filenames = []
 filenames[Orientation.TOP] = [
-	"/pieces/top_king.svg",
-	"/pieces/top_queen.svg",
-	"/pieces/top_rook.svg",
-	"/pieces/top_bishop.svg",
-	"/pieces/top_knight.svg",
-	"/pieces/top_pawn.svg",
+	"/pieces/top_king.png",
+	"/pieces/top_queen.png",
+	"/pieces/top_rook.png",
+	"/pieces/top_bishop.png",
+	"/pieces/top_knight.png",
+	"/pieces/top_pawn.png",
 ]
 
 filenames[Orientation.RIGHT] = [
-	"/pieces/right_king.svg",
-	"/pieces/right_queen.svg",
-	"/pieces/right_rook.svg",
-	"/pieces/right_bishop.svg",
-	"/pieces/right_knight.svg",
-	"/pieces/right_pawn.svg",
+	"/pieces/right_king.png",
+	"/pieces/right_queen.png",
+	"/pieces/right_rook.png",
+	"/pieces/right_bishop.png",
+	"/pieces/right_knight.png",
+	"/pieces/right_pawn.png",
 ]
 
 filenames[Orientation.BOTTOM] = [
-	"/pieces/bottom_king.svg",
-	"/pieces/bottom_queen.svg",
-	"/pieces/bottom_rook.svg",
-	"/pieces/bottom_bishop.svg",
-	"/pieces/bottom_knight.svg",
-	"/pieces/bottom_pawn.svg",
+	"/pieces/bottom_king.png",
+	"/pieces/bottom_queen.png",
+	"/pieces/bottom_rook.png",
+	"/pieces/bottom_bishop.png",
+	"/pieces/bottom_knight.png",
+	"/pieces/bottom_pawn.png",
 ]
 
 filenames[Orientation.LEFT] = [
-	"/pieces/left_king.svg",
-	"/pieces/left_queen.svg",
-	"/pieces/left_rook.svg",
-	"/pieces/left_bishop.svg",
-	"/pieces/left_knight.svg",
-	"/pieces/left_pawn.svg",
+	"/pieces/left_king.png",
+	"/pieces/left_queen.png",
+	"/pieces/left_rook.png",
+	"/pieces/left_bishop.png",
+	"/pieces/left_knight.png",
+	"/pieces/left_pawn.png",
 ]
-export function getSquare(orientation, [x, y]) {
-	if (false) { // TODO is four player
-		const offset = 3
-		x += offset
+export function getSquare(orientation, [x, y], largeBoard) {
+	if (largeBoard) {
 		const files = "abcdefghijklmn"
 		const ranks = [1,2,3,4,5,6,7,8,9,10,11,12,13,14]
 		switch (orientation) {
@@ -105,8 +103,8 @@ export function getSquare(orientation, [x, y]) {
 	return null
 }
 
-export function spawnPieces(orientation) {
-	let pieces = {}
+export function spawnPieces(orientation, largeBoard) {
+	let pieces = []
 	for (let x = 0; x < 8; x++) {
 		for (let y = 0; y < 2; y++) {
 			let piece = {}
@@ -118,10 +116,10 @@ export function spawnPieces(orientation) {
 
 			piece.team = orientation
 			piece.type = start[y][x]
-			if (piece.type == Piece.PAWN) continue
-			// TODO TODO TODO this should not be fixed to 7!!!!!!!!!
-			piece.square = getSquare(orientation, [x, 7-y])
-			pieces[piece.square] = piece
+
+			if (largeBoard) piece.square = getSquare(orientation, [x+3, 13-y], largeBoard)
+			else piece.square = getSquare(orientation, [x, 7-y], largeBoard)
+			pieces.push(piece)
 		}
 	}
 	return pieces
@@ -129,8 +127,10 @@ export function spawnPieces(orientation) {
 
 // vectors
 export const add = (a,b) => [a[0]+b[0], a[1]+b[1]]
+export const abs = (a) => [Math.abs(a[0]), Math.abs(a[1])]
 export const sub = (a,b) => [a[0]-b[0], a[1]-b[1]]
 export const neg = (a) => [-a[0], -a[1]]
 export const mul = (a,n) => [a[0]*n, a[1]*n]
 export const eq = (a,b) => a[0] === b[0] && a[1] === b[1]
 export const transpose = (a) => [a[1], a[0]]
+export const round = (a) => [Math.round(a[0]), Math.round(a[1])]
