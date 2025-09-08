@@ -1,0 +1,356 @@
+/* Music Player Styles - Matching App Theme */
+.music-player {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 320px;
+  height: 80px;
+  border: 2px solid var(--border-color);
+  background: var(--bg-color);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+.music-player:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.music-player-background {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid var(--accent-border);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.music-player-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 12px;
+  color: var(--text-color);
+}
+
+/* Album Art */
+.album-art {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+.album-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.loading-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Track Info */
+.track-info {
+  flex: 1;
+  min-width: 0;
+  margin-right: 12px;
+}
+
+.track-album {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--secondary-text);
+  margin-bottom: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.track-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Time Display */
+.time-display {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--secondary-text);
+  margin-left: auto;
+  flex-shrink: 0;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent-border);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: pointer;
+  opacity: 0;
+  z-index: 2;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: none;
+}
+
+.progress-bar::-webkit-progress-bar {
+  background: transparent;
+}
+
+.progress-bar::-webkit-progress-value {
+  background: transparent;
+}
+
+.progress-bar::-moz-progress-bar {
+  background: transparent;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--text-color);
+  transition: width 0.1s ease;
+}
+
+/* Control Buttons */
+.control-buttons {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  padding: 0 20px;
+}
+
+.control-buttons.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.control-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 40px;
+  height: 40px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.control-btn:hover {
+  background: var(--text-color);
+  color: var(--bg-color);
+  transform: scale(1.05);
+}
+
+.control-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.play-pause-btn {
+  background: var(--accent-bg);
+  border: 2px solid var(--border-color);
+  width: 48px;
+  height: 48px;
+}
+
+.play-pause-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.play-pause-btn:hover {
+  background: var(--text-color);
+  color: var(--bg-color);
+}
+
+/* Volume Control */
+.volume-control {
+  position: relative;
+}
+
+.volume-control-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  justify-content: center;
+}
+
+.volume-slider-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.volume-label {
+  font-size: 12px;
+  color: var(--text-color);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+.volume-value {
+  font-size: 12px;
+  color: var(--secondary-text);
+  font-family: 'JetBrains Mono', monospace;
+  min-width: 35px;
+  text-align: right;
+}
+
+.volume-slider {
+  flex: 1;
+  min-width: 120px;
+  height: 4px;
+  background: var(--accent-border);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--text-color);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--text-color);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+/* Error Message */
+.error-message {
+  position: absolute;
+  bottom: -30px;
+  left: 0;
+  right: 0;
+  background: var(--accent-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 8px 12px;
+  font-size: 12px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .music-player {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: 350px;
+  }
+  
+  .time-display {
+    display: none;
+  }
+  
+  .track-info {
+    margin-right: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .music-player {
+    height: 70px;
+  }
+  
+  .music-player-content {
+    padding: 10px;
+  }
+  
+  .album-art {
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+  }
+  
+  .track-title {
+    font-size: 13px;
+  }
+  
+  .track-artist {
+    font-size: 11px;
+  }
+  
+  .control-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .play-pause-btn {
+    width: 42px;
+    height: 42px;
+  }
+}
