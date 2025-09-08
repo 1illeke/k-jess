@@ -4,35 +4,35 @@
       "id": 1,
       "album": "K/Jess OST",
       "title": "Checkmate Symphony",
-      "src": "/music/CheckmateSymphony.wav",
+      "src": "/music/CheckmateSymphony.mp3",
       "coverArt": "/music/checkmate.jpeg"
     },
     {
       "id": 2,
       "album": "K/Jess OST",
       "title": "Castle me",
-      "src": "/music/castle.wav",
+      "src": "/music/Castle_me.mp3",
       "coverArt": "/music/castle.jpeg"
     },
     {
       "id": 3,
       "album": "K/Jess OST",
       "title": "Clash of Kings",
-      "src": "/music/Clash_of_Kings.wav",
+      "src": "/music/Clash_of_Kings.mp3",
       "coverArt": "/music/Clash_of_kings.png"
     },
     {
       "id": 4,
       "album": "K/Jess OST",
       "title": "Shadowboxing Minds",
-      "src": "/music/Shadowboxing_Minds.wav",
+      "src": "/music/Shadowboxing_Minds.mp3",
       "coverArt": "/music/Shadowboxing_minds.png"
     },
     {
       "id": 5,
       "album": "K/Jess OST",
       "title": "Kaleidoscope",
-      "src": "/music/Kaleidoscope.wav",
+      "src": "/music/Kaleidoscope.mp3",
       "coverArt": "/music/Kaleidoscope.png"
     }
   ]
