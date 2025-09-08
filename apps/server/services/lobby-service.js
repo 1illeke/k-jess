@@ -21,7 +21,6 @@ export class LobbyService {
       mode: '2 Player',
       cooldownMs: 1000,
       maxPlayers: 4,
-      randomColors: false,
       ...settings
     };
 
@@ -32,8 +31,7 @@ export class LobbyService {
       createdAt: currentTime,
       phase: 'lobby',
       settings: defaultSettings,
-      players: new Map(),
-      playerColors: {}
+      players: new Map()
     };
 
     // Add host player
@@ -46,9 +44,6 @@ export class LobbyService {
     };
 
     lobby.players.set(hostSocketId, hostPlayer);
-    
-    // Initialize colors
-    lobby.playerColors[playerId] = this.getPlayerColor(0, defaultSettings.randomColors);
     
     this.lobbies.set(code, lobby);
     return code;
@@ -104,12 +99,6 @@ export class LobbyService {
 
     lobby.players.set(socketId, player);
     
-    // Assign color to new player
-    if (!lobby.playerColors[playerId]) {
-      const playerIndex = Object.keys(lobby.playerColors).length;
-      lobby.playerColors[playerId] = this.getPlayerColor(playerIndex, lobby.settings.randomColors);
-    }
-    
     return player;
   }
 
@@ -152,16 +141,8 @@ export class LobbyService {
       throw new Error('Cannot update settings after game starts');
     }
 
-    const oldRandomColors = lobby.settings.randomColors;
-    
     // Merge settings
     Object.assign(lobby.settings, partialSettings);
-    
-    // Regenerate colors if randomColors setting changed
-    if ('randomColors' in partialSettings && partialSettings.randomColors !== oldRandomColors) {
-      const playerIds = Array.from(lobby.players.values()).map(p => p.playerId);
-      lobby.playerColors = this.generateColorAssignments(playerIds, partialSettings.randomColors);
-    }
   }
 
   startGame({ code, byPlayerId }) {
@@ -216,11 +197,16 @@ export class LobbyService {
     if (!lobby) return null;
 
     const host = lobby.players.get(lobby.hostId);
-    const players = Array.from(lobby.players.values()).map(player => ({
+    const colors = ['White', 'Black', 'Orange', 'Red'];
+    
+    // Sort players by join time to assign colors in order
+    const sortedPlayers = Array.from(lobby.players.values()).sort((a, b) => a.joinedAt - b.joinedAt);
+    
+    const players = sortedPlayers.map((player, index) => ({
       playerId: player.playerId,
       name: player.name,
       connected: player.connected,
-      color: lobby.playerColors[player.playerId] || 'White'
+      color: colors[index % colors.length]
     }));
 
     return {
@@ -243,32 +229,4 @@ export class LobbyService {
     };
   }
 
-  // Helper methods for color management
-  getPlayerColor(index, randomColors = false) {
-    const colors = ['White', 'Black', 'Orange', 'Red'];
-    if (randomColors) {
-      return colors[Math.floor(Math.random() * colors.length)];
-    }
-    return colors[index % colors.length];
-  }
-
-  generateColorAssignments(playerIds, randomColors = false) {
-    const colors = ['White', 'Black', 'Orange', 'Red'];
-    let colorOrder = [...colors];
-    
-    if (randomColors) {
-      // Shuffle colors
-      for (let i = colorOrder.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [colorOrder[i], colorOrder[j]] = [colorOrder[j], colorOrder[i]];
-      }
-    }
-
-    const colorMap = {};
-    playerIds.forEach((playerId, index) => {
-      colorMap[playerId] = colorOrder[index % colorOrder.length];
-    });
-    
-    return colorMap;
-  }
 }

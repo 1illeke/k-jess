@@ -13,7 +13,6 @@ function LobbyPage() {
   const initialName = location.state?.playerName || localStorage.getItem('playerName') || 'Player1'
   const [playerName, setPlayerName] = useState(initialName)
   const [gameMode, setGameMode] = useState('1v1')
-  const [randomColors, setRandomColors] = useState(false)
   const [inviteCode, setInviteCode] = useState(location.state?.inviteCode || null)
   const [showLobby, setShowLobby] = useState(Boolean(gameId || location.state?.inviteCode))
   const [lobbyPlayers, setLobbyPlayers] = useState([])
@@ -106,7 +105,6 @@ function LobbyPage() {
       onSettings: (settings) => {
         if (!settings) return
         setGameMode(settings.mode || '1v1')
-        setRandomColors(Boolean(settings.randomColors))
       },
       // dont listen for players here, let the specific join/create handlers manage that
     })
@@ -145,7 +143,6 @@ function LobbyPage() {
         if (lobbyPublic.settings) {
           const frontendMode = getModeFromMaxPlayers(lobbyPublic.settings.maxPlayers || 4)
           setGameMode(frontendMode)
-          setRandomColors(lobbyPublic.settings.randomColors || false)
         }
       },
       onError: (err) => console.error('Lobby error:', err?.message || err),
@@ -230,7 +227,6 @@ function LobbyPage() {
             if (lobbyPublic.settings) {
               const frontendMode = getModeFromMaxPlayers(lobbyPublic.settings.maxPlayers || 4)
               setGameMode(frontendMode)
-              setRandomColors(lobbyPublic.settings.randomColors || false)
             }
           }
         }
@@ -245,12 +241,11 @@ function LobbyPage() {
     }
   }
 
-  const handleSettingsChange = (newMode, newRandom) => {
+  const handleSettingsChange = (newMode) => {
     const code = gameId || inviteCode
     if (!code || !isHost) return // Only allow host to change settings
     setGameMode(newMode)
-    setRandomColors(newRandom)
-    lobbySocket.updateSettings({ code, settings: { mode: newMode, randomColors: newRandom } })
+    lobbySocket.updateSettings({ code, settings: { mode: newMode } })
   }
 
   const handleNameBlur = () => {
@@ -346,7 +341,7 @@ function LobbyPage() {
                   <select
                     id="gameMode"
                     value={gameMode}
-                    onChange={(e) => handleSettingsChange(e.target.value, randomColors)}
+                    onChange={(e) => handleSettingsChange(e.target.value)}
                     className="setting-select"
                   >
                     <option value="1v1">2 players</option>
@@ -360,30 +355,6 @@ function LobbyPage() {
                      '4 players'}
                   </span>
                 )}
-              </div>
-              <div className="setting-item">
-                <label className="setting-label">
-                  {isHost ? (
-                    <>
-                      <span className="checkbox-wrapper">
-                        <input
-                          type="checkbox"
-                          checked={randomColors}
-                          onChange={(e) => handleSettingsChange(gameMode, e.target.checked)}
-                          className="setting-checkbox"
-                        />
-                      </span>
-                      <span className="checkbox-label">Random colors</span>
-                    </>
-                  ) : (
-                    <span className="checkbox-display">
-                      <span className="checkbox-readonly">
-                        {randomColors ? '☑' : '☐'}
-                      </span>
-                      <span className="checkbox-label">Random colors</span>
-                    </span>
-                  )}
-                </label>
               </div>
             </div>
           </section>

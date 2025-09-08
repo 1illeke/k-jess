@@ -109,8 +109,7 @@ export function updateSettings({ code, settings }, { onError } = {}) {
   const backendSettings = {
     mode: '2 Player',
     maxPlayers: getMaxPlayersFromMode(settings.mode),
-    cooldownMs: 1000,
-    randomColors: settings.randomColors
+    cooldownMs: 1000
   };
   
   socket.emit(LOBBY_EVENTS.UPDATE_SETTINGS, { code, partialSettings: backendSettings });
@@ -145,8 +144,7 @@ export function listenLobby({ onPlayers, onSettings } = {}) {
       }
       if (onSettings) {
         const frontendSettings = {
-          mode: getModeFromMaxPlayers(lobbyPublic.settings?.maxPlayers || 4),
-          randomColors: lobbyPublic.settings?.randomColors || false
+          mode: getModeFromMaxPlayers(lobbyPublic.settings?.maxPlayers || 4)
         };
         onSettings(frontendSettings);
       }
@@ -156,8 +154,7 @@ export function listenLobby({ onPlayers, onSettings } = {}) {
   const handleSettingsUpdated = (data) => {
     if (onSettings && data?.settings) {
       const frontendSettings = {
-        mode: getModeFromMaxPlayers(data.settings.maxPlayers || 4),
-        randomColors: data.settings.randomColors || false
+        mode: getModeFromMaxPlayers(data.settings.maxPlayers || 4)
       };
       onSettings(frontendSettings);
     }
