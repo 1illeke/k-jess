@@ -2,4 +2,5 @@
 export { default as Button } from './Button'
 export { default as ThemeToggle } from './ThemeToggle'
 export { default as Modal } from './Modal'
+export { default as MusicPlayer } from './MusicPlayer'
 export { TwoPlayerBoard, ThreePlayerBoard, FourPlayerBoard } from './boards' 
