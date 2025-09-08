@@ -28,6 +28,7 @@ export class LobbyService {
     const lobby = {
       code,
       hostId: hostSocketId,
+      hostPlayerId: playerId, // Add hostPlayerId for admin page
       createdAt: currentTime,
       phase: 'lobby',
       settings: defaultSettings,
@@ -129,6 +130,7 @@ export class LobbyService {
       const newHost = Array.from(lobby.players.values()).find(p => p.connected);
       if (newHost) {
         lobby.hostId = newHost.socketId;
+        lobby.hostPlayerId = newHost.playerId;
       }
     }
 
@@ -192,9 +194,12 @@ export class LobbyService {
       throw new Error('Lobby not found');
     }
 
-    const host = lobby.players.get(lobby.hostId);
-    if (!host || host.playerId !== byPlayerId) {
-      throw new Error('Only the host can end the lobby');
+    // Allow admin termination (byPlayerId === null) or host termination
+    if (byPlayerId !== null) {
+      const host = lobby.players.get(lobby.hostId);
+      if (!host || host.playerId !== byPlayerId) {
+        throw new Error('Only the host can end the lobby');
+      }
     }
 
     lobby.phase = 'ended';

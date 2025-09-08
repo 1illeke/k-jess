@@ -42,6 +42,112 @@ app.get('/api/online-count', (req, res) => {
   });
 });
 
+// Admin endpoints
+app.get('/api/admin/lobbies', (req, res) => {
+  try {
+    const lobbies = [];
+    
+    for (const code of lobbyService.getActiveCodes()) {
+      const lobby = lobbyService.getLobby(code);
+      if (lobby) {
+        // Convert players Map to array with detailed info
+        const playersArray = Array.from(lobby.players.values()).map(player => ({
+          playerId: player.playerId,
+          name: player.name,
+          connected: player.connected,
+          joinedAt: player.joinedAt,
+          disconnectedAt: player.disconnectedAt
+        }));
+        
+        lobbies.push({
+          code: lobby.code,
+          phase: lobby.phase,
+          settings: lobby.settings,
+          hostPlayerId: lobby.hostPlayerId,
+          createdAt: lobby.createdAt,
+          startedAt: lobby.startedAt,
+          endedAt: lobby.endedAt,
+          players: playersArray
+        });
+      }
+    }
+    
+    res.json({
+      lobbies,
+      serverNow: new Date().toISOString(),
+      totalCount: lobbies.length
+    });
+  } catch (error) {
+    console.error('Error fetching lobbies for admin:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/admin/lobbies/:code', (req, res) => {
+  try {
+    const { code } = req.params;
+    
+    if (!code) {
+      return res.status(400).json({ error: 'Lobby code is required' });
+    }
+    
+    const lobby = lobbyService.getLobby(code);
+    if (!lobby) {
+      return res.status(404).json({ error: 'Lobby not found' });
+    }
+    
+    // End the lobby (this will handle cleanup)
+    lobbyService.endLobby({
+      code,
+      byPlayerId: null, // Admin termination
+      reason: 'Terminated by admin'
+    });
+    
+    // Notify all players in the lobby
+    io.to(code).emit(LOBBY_EVENTS.ENDED, {
+      reason: 'Lobby terminated by admin'
+    });
+    
+    // Remove all sockets from the room
+    const room = io.sockets.adapter.rooms.get(code);
+    if (room) {
+      for (const socketId of room) {
+        const socketInRoom = io.sockets.sockets.get(socketId);
+        if (socketInRoom) {
+          socketInRoom.leave(code);
+        }
+      }
+    }
+    
+    // Also clean up game room if it exists
+    const gameRoom = io.sockets.adapter.rooms.get(`game:${code}`);
+    if (gameRoom) {
+      for (const socketId of gameRoom) {
+        const socketInRoom = io.sockets.sockets.get(socketId);
+        if (socketInRoom) {
+          socketInRoom.leave(`game:${code}`);
+        }
+      }
+    }
+    
+    // Clean up game timer
+    gameTimers.delete(code);
+    
+    // Clean up chat history
+    chatRooms.delete(code);
+    
+    console.log(`Admin terminated lobby ${code}`);
+    
+    res.json({
+      success: true,
+      message: `Lobby ${code} terminated successfully`
+    });
+  } catch (error) {
+    console.error('Error terminating lobby:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Initialize Socket.IO with CORS
 const io = new Server(server, {
   cors: {
@@ -433,7 +539,7 @@ io.on('connection', (socket) => {
       timer.paused = false;
       gameTimers.set(code, timer);
 
-      console.log(`Timer started for ${code}`);
+      console.log(`Timer started for lobby ${code}`);
     } catch (error) {
       console.error('Error starting timer:', error);
     }
@@ -523,14 +629,29 @@ function handlePlayerDisconnection(socketId) {
 }
 
 // Timer update system - broadcast current time every second
-setInterval(() => {
+const timerStartTime = Date.now();
+let updateCounter = 0;
+
+function sendTimerUpdates() {
+  const now = Date.now();
+  updateCounter++;
+  
+  // sanity check for timer
+  const realElapsedMs = now - timerStartTime;
+  
   for (const [code, timer] of gameTimers.entries()) {
     if (!timer.paused) {
-      const currentElapsed = Math.floor((timer.elapsed + (Date.now() - timer.startTime)) / 1000);
+      const currentElapsed = Math.floor((timer.elapsed + (now - timer.startTime)) / 1000);
       io.to(`game:${code}`).emit(TIMER_EVENTS.UPDATE, { code, elapsed: currentElapsed });
     }
   }
-}, 1000);
+  
+  const nextUpdateIn = 1000 - (realElapsedMs % 1000);
+  setTimeout(sendTimerUpdates, nextUpdateIn);
+}
+
+// Start the timer system
+setTimeout(sendTimerUpdates, 1000);
 
 // Start server
 server.listen(PORT, () => {
