@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button, ThemeToggle } from './ui'
 import './AdminPage.css'
-import { getPlayerColor } from '../../utils/colors.js'
 
 function AdminPage() {
   const [lobbies, setLobbies] = useState([])
@@ -181,7 +180,6 @@ function AdminPage() {
                         <h4>Settings</h4>
                         <div className="settings-grid">
                           <div>Mode: {lobby.settings.maxPlayers} player</div>
-                          <div>Random Colors: {lobby.settings.randomColors ? 'Yes' : 'No'}</div>
                         </div>
                       </div>
 
@@ -204,14 +202,11 @@ function AdminPage() {
                           <h5 className="players-group-title connected">Connected ({connectedPlayers.length})</h5>
                           <div className="players-grid">
                             {connectedPlayers.map((player) => {
-                              const playerColor = getPlayerColor(player.playerId, lobby.players);
                               return (
                                 <div key={player.playerId} className="player-card connected">
                                   <div className="player-info">
                                     <span className="player-name">{player.name}</span>
-                                    {playerColor && (
-                                      <span className="color-badge" style={{backgroundColor: playerColor.toLowerCase()}}>{playerColor}</span>
-                                    )}
+                                    <span className="color-badge" style={{backgroundColor: (player.color || 'White').toLowerCase()}}>{player.color || 'White'}</span>
                                     {player.playerId === lobby.hostPlayerId && (
                                       <span className="host-badge">HOST</span>
                                     )}
@@ -232,14 +227,11 @@ function AdminPage() {
                           <h5 className="players-group-title disconnected">Disconnected ({disconnectedPlayers.length})</h5>
                           <div className="players-grid">
                             {disconnectedPlayers.map((player) => {
-                              const playerColor = getPlayerColor(player.playerId, lobby.players);
                               return (
                                 <div key={player.playerId} className="player-card disconnected">
                                   <div className="player-info">
                                     <span className="player-name">{player.name}</span>
-                                    {playerColor && (
-                                      <span className="color-badge" style={{backgroundColor: playerColor.toLowerCase()}}>{playerColor}</span>
-                                    )}
+                                    <span className="color-badge" style={{backgroundColor: (player.color || 'White').toLowerCase()}}>{player.color || 'White'}</span>
                                     {player.playerId === lobby.hostPlayerId && (
                                       <span className="host-badge">HOST</span>
                                     )}
