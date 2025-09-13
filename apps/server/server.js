@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import { LOBBY_EVENTS, GAME_EVENTS, CHAT_EVENTS, TIMER_EVENTS } from './constants/socket-events.js';
 import { LobbyService } from './services/lobby-service.js';
+import { ChessEngine } from './services/chess-engine.js';
 
 const app = express();
 const server = createServer(app);
@@ -136,6 +137,9 @@ app.delete('/api/admin/lobbies/:code', (req, res) => {
     // Clean up chat history
     chatRooms.delete(code);
     
+    // Clean up chess engine
+    chessEngines.delete(code);
+    
     console.log(`Admin terminated lobby ${code}`);
     
     res.json({
@@ -164,6 +168,7 @@ const lobbyService = new LobbyService();
 // Simple in-memory storage for game features
 const gameTimers = new Map(); // code -> { startTime, elapsed, paused }
 const chatRooms = new Map();  // code -> messages[]
+const chessEngines = new Map(); // code -> ChessEngine instance
 
 // Function to broadcast online count to all clients
 function broadcastOnlineCount() {
@@ -340,6 +345,27 @@ io.on('connection', (socket) => {
       io.to(`game:${code}`).emit(GAME_EVENTS.STARTED, { code });
       gameTimers.set(code, { elapsed: 0, paused: true, startTime: Date.now() });
       
+      // Initialize chess engine for the game
+      const chessEngine = new ChessEngine(code, lobby.settings);
+      chessEngines.set(code, chessEngine);
+      
+      // Send initial game state to all players
+      const gameRoom = io.sockets.adapter.rooms.get(`game:${code}`);
+      if (gameRoom) {
+        for (const socketId of gameRoom) {
+          const playerSocket = io.sockets.sockets.get(socketId);
+          if (playerSocket) {
+            // Get player's orientation from lobby
+            const player = lobby.players.get(socketId);
+            const playerOrientation = getPlayerOrientation(lobby, player);
+            
+            // Send initial game state for this player
+            const gameState = chessEngine.getGameStateForPlayer(playerOrientation);
+            playerSocket.emit(GAME_EVENTS.GAME_STATE, gameState);
+          }
+        }
+      }
+      
       if (ack) ack({ success: true, gameStarted: true });
       console.log(`Game started for lobby ${code}`);
     } catch (error) {
@@ -402,6 +428,21 @@ io.on('connection', (socket) => {
       }
 
       socket.join(`game:${code}`);
+      
+      // If game is already started, send current game state to the joining player
+      if (lobby.phase === 'in_game') {
+        const chessEngine = chessEngines.get(code);
+        if (chessEngine) {
+          // Get player's orientation from lobby
+          const player = lobby.players.get(socket.id);
+          const playerOrientation = getPlayerOrientation(lobby, player);
+          
+          // Send current game state for this player
+          const gameState = chessEngine.getGameStateForPlayer(playerOrientation);
+          socket.emit(GAME_EVENTS.GAME_STATE, gameState);
+        }
+      }
+      
       if (ack) ack({ success: true });
       console.log(`Player joined game ${code}`);
     } catch (error) {
@@ -491,6 +532,66 @@ io.on('connection', (socket) => {
       console.log(`Player ${playerName} quit game ${code}`);
     } catch (error) {
       console.error('Error quitting game:', error);
+    }
+  });
+
+  // Handle chess move
+  socket.on(GAME_EVENTS.MAKE_MOVE, (data, ack) => {
+    try {
+      const { code, from, to, playerOrientation } = data || {};
+      if (!code || !from || !to) {
+        if (ack) ack({ success: false, error: 'Missing required fields' });
+        return;
+      }
+
+      const lobby = lobbyService.getLobby(code);
+      if (!lobby) {
+        if (ack) ack({ success: false, error: 'Game not found' });
+        return;
+      }
+
+      // Get or create chess engine for this game
+      let chessEngine = chessEngines.get(code);
+      if (!chessEngine) {
+        chessEngine = new ChessEngine(code, lobby.settings);
+        chessEngines.set(code, chessEngine);
+      }
+
+      // Make the move
+      const result = chessEngine.makeMove(from, to, playerOrientation);
+      if (!result.success) {
+        if (ack) ack({ success: false, error: result.error });
+        return;
+      }
+
+      // Send game state to all players in the game room
+      const gameRoom = io.sockets.adapter.rooms.get(`game:${code}`);
+      if (gameRoom) {
+        for (const socketId of gameRoom) {
+          const playerSocket = io.sockets.sockets.get(socketId);
+          if (playerSocket) {
+            // Get player's orientation from lobby
+            const player = lobby.players.get(socketId);
+            const playerOrientation = getPlayerOrientation(lobby, player);
+            
+            // Send mirrored game state for this player
+            const gameState = chessEngine.getGameStateForPlayer(playerOrientation);
+            playerSocket.emit(GAME_EVENTS.GAME_STATE, gameState);
+          }
+        }
+      }
+
+      // Broadcast the move to all players
+      io.to(`game:${code}`).emit(GAME_EVENTS.MOVE_MADE, {
+        move: result.move,
+        gameState: result.gameState
+      });
+
+      if (ack) ack({ success: true, move: result.move });
+      console.log(`Move made in game ${code}: ${from} -> ${to}`);
+    } catch (error) {
+      console.error('Error making move:', error);
+      if (ack) ack({ success: false, error: error.message });
     }
   });
 
@@ -598,6 +699,26 @@ function emitLobbyState(io, code) {
   }
 }
 
+// Helper function to get player orientation based on lobby order
+function getPlayerOrientation(lobby, player) {
+  if (!lobby || !player) return null;
+  
+  const players = Array.from(lobby.players.values());
+  const playerIndex = players.findIndex(p => p.playerId === player.playerId);
+  
+  // For 2-player games: first player is BOTTOM, second is TOP
+  if (players.length === 2) {
+    return playerIndex === 0 ? 2 : 0; // BOTTOM : TOP
+  }
+  
+  // For 4-player games: assign orientations in order
+  if (players.length === 4) {
+    return playerIndex; // 0: TOP, 1: RIGHT, 2: BOTTOM, 3: LEFT
+  }
+  
+  return 2; // Default to BOTTOM
+}
+
 // Handle player disconnection
 function handlePlayerDisconnection(socketId) {
   // Find which lobby this player was in
@@ -652,6 +773,25 @@ function sendTimerUpdates() {
 
 // Start the timer system
 setTimeout(sendTimerUpdates, 1000);
+
+// Graceful shutdown handling
+process.on('SIGINT', () => {
+  console.log('Received SIGINT, shutting down gracefully...');
+  lobbyService.cleanup();
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM, shutting down gracefully...');
+  lobbyService.cleanup();
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
 
 // Start server
 server.listen(PORT, () => {

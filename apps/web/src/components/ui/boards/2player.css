@@ -52,6 +52,12 @@
 .chess-piece {
 	aspect-ratio: 1;
 	position: absolute;
+	cursor: pointer;
+}
+
+.chess-piece.disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
 }
 
 .move {

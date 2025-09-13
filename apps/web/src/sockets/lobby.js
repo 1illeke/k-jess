@@ -3,10 +3,10 @@ import { LOBBY_EVENTS } from '../../constants/socket-events.js'
 
 // get stable player ID
 function getPlayerId() {
-  let playerId = localStorage.getItem('playerId');
+  let playerId = sessionStorage.getItem('playerId');
   if (!playerId) {
     playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('playerId', playerId);
+    sessionStorage.setItem('playerId', playerId);
   }
   return playerId;
 }

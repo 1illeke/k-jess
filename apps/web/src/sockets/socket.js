@@ -8,7 +8,11 @@ const LAST_ROOM_KEY = 'kjess:lastRoom'
 
 export function saveLastRoom(room) {
   try {
-    localStorage.setItem(LAST_ROOM_KEY, JSON.stringify(room))
+    const roomWithTimestamp = {
+      ...room,
+      timestamp: Date.now()
+    }
+    localStorage.setItem(LAST_ROOM_KEY, JSON.stringify(roomWithTimestamp))
   } catch {}
 }
 
@@ -33,45 +37,53 @@ export const socket = io(SOCKET_URL, {
   transports: ['websocket']
 })
 
-// Auto-rejoin with error handling
+// Auto-rejoin with error handling (only for recent disconnections)
 socket.on('connect', () => {
   const last = getLastRoom()
-  if (last?.code && last?.playerName) {
-    // Get stable player ID for rejoin
-    let playerId = localStorage.getItem('playerId');
-    if (!playerId) {
-      playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('playerId', playerId);
-    }
-    
-    // Use acknowledgement to handle rejoin errors gracefully
-    socket.emit(LOBBY_EVENTS.JOIN, { 
-      code: last.code, 
-      playerId, 
-      name: last.playerName 
-    }, (response) => {
-      if (!response?.success) {
-        // Lobby doesn't exist anymore, clear the last room
-        console.log('Failed to rejoin lobby, clearing last room:', response?.error);
-        clearLastRoom();
+  if (last?.code && last?.playerName && last?.timestamp) {
+    // Only try to rejoin if the disconnect was recent (within 30 seconds)
+    const timeSinceDisconnect = Date.now() - last.timestamp
+    if (timeSinceDisconnect < 30000) {
+      // Get stable player ID for rejoin (unique per tab)
+      let playerId = sessionStorage.getItem('playerId');
+      if (!playerId) {
+        playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        sessionStorage.setItem('playerId', playerId);
       }
-    });
-    
-    // Also listen for errors and clear last room on failure
-    const errorHandler = (error) => {
-      if (error?.reason === 'NOT_FOUND' || error?.details?.includes('not found')) {
-        console.log('Lobby not found during rejoin, clearing last room');
-        clearLastRoom();
+      
+      // Use acknowledgement to handle rejoin errors gracefully
+      socket.emit(LOBBY_EVENTS.JOIN, { 
+        code: last.code, 
+        playerId, 
+        name: last.playerName 
+      }, (response) => {
+        if (!response?.success) {
+          // Lobby doesn't exist anymore, clear the last room
+          console.log('Failed to rejoin lobby, clearing last room:', response?.error);
+          clearLastRoom();
+        }
+      });
+      
+      // Also listen for errors and clear last room on failure
+      const errorHandler = (error) => {
+        if (error?.reason === 'NOT_FOUND' || error?.details?.includes('not found')) {
+          console.log('Lobby not found during rejoin, clearing last room');
+          clearLastRoom();
+          socket.off(LOBBY_EVENTS.ERROR, errorHandler);
+        }
+      };
+      
+      socket.once(LOBBY_EVENTS.ERROR, errorHandler);
+      
+      // Clean up error handler after a timeout
+      setTimeout(() => {
         socket.off(LOBBY_EVENTS.ERROR, errorHandler);
-      }
-    };
-    
-    socket.once(LOBBY_EVENTS.ERROR, errorHandler);
-    
-    // Clean up error handler after a timeout
-    setTimeout(() => {
-      socket.off(LOBBY_EVENTS.ERROR, errorHandler);
-    }, 5000);
+      }, 5000);
+    } else {
+      // Disconnect was too long ago, clear the last room
+      console.log('Last room is too old, clearing it');
+      clearLastRoom();
+    }
   }
 })
 

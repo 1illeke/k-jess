@@ -34,12 +34,13 @@ function GamePage() {
   })
   const chatMessagesRef = useRef(null)
 
-  // Get stable player ID
+  // Get stable player ID (unique per tab)
   const getPlayerId = () => {
-    let playerId = localStorage.getItem('playerId');
+    // Use sessionStorage instead of localStorage to make it unique per tab
+    let playerId = sessionStorage.getItem('playerId');
     if (!playerId) {
       playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('playerId', playerId);
+      sessionStorage.setItem('playerId', playerId);
     }
     return playerId;
   }
@@ -131,10 +132,31 @@ function GamePage() {
         code: gameId, 
         playerId: getPlayerId(), 
         name: playerName 
+      }, (response) => {
+        if (!response?.success) {
+          console.error('Failed to join lobby:', response?.error);
+          // Navigate back to home if lobby doesn't exist
+          navigate('/', { 
+            state: { 
+              error: 'Lobby not found or expired',
+              playerName 
+            } 
+          });
+        }
       });
+      
       gameSocket.joinGame({ code: gameId }, {
         onJoined: () => {},
-        onError: (err) => console.error('Failed to join game:', err)
+        onError: (err) => {
+          console.error('Failed to join game:', err);
+          // Navigate back to home if game doesn't exist
+          navigate('/', { 
+            state: { 
+              error: 'Game not found or expired',
+              playerName 
+            } 
+          });
+        }
       });
       const handleLobbyState = (data) => {
         const { lobbyPublic } = data || {};
@@ -237,16 +259,42 @@ function GamePage() {
     }
   }
 
+  // Get player orientation based on their position in the lobby
+  const getPlayerOrientation = () => {
+    const playerId = getPlayerId()
+    const playerIndex = gamePlayers.findIndex(p => p.id === playerId)
+    
+    // For 2-player games: first player is BOTTOM, second is TOP
+    if (gamePlayers.length === 2) {
+      return playerIndex === 0 ? 2 : 0 // BOTTOM : TOP
+    }
+    
+    // For 4-player games: assign orientations in order
+    if (gamePlayers.length === 4) {
+      return playerIndex // 0: TOP, 1: RIGHT, 2: BOTTOM, 3: LEFT
+    }
+    
+    return 2 // Default to BOTTOM
+  }
+
   const renderBoard = () => {
     switch(gameMode) {
       case '1v1':
-        return <TwoPlayerBoard />
+        return <TwoPlayerBoard 
+          gameCode={gameId}
+          playerOrientation={getPlayerOrientation()}
+          boardSize={gameSettings.boardSize || 8}
+        />
       case '1v1v1':
         return <ThreePlayerBoard />
       case '1v1v1v1':
         return <FourPlayerBoard />
       default:
-        return <TwoPlayerBoard />
+        return <TwoPlayerBoard 
+          gameCode={gameId}
+          playerOrientation={getPlayerOrientation()}
+          boardSize={gameSettings.boardSize || 8}
+        />
     }
   }
 

@@ -32,6 +32,7 @@ export const GAME_EVENTS = {
   PAUSE: 'game:pause',
   RESUME: 'game:resume',
   QUIT: 'game:quit',
+  MAKE_MOVE: 'game:makeMove',
 
   // Server to Client
   JOINED: 'game:joined',
@@ -40,6 +41,8 @@ export const GAME_EVENTS = {
   RESUMED: 'game:resumed',
   ENDED: 'game:ended',
   ERROR: 'game:error',
+  MOVE_MADE: 'game:moveMade',
+  GAME_STATE: 'game:gameState',
   
   // Navigation
   NAVIGATE_AWAY: 'game:navigateAway'
@@ -120,6 +123,10 @@ export const EVENT_SCHEMAS = {
   [GAME_EVENTS.QUIT]: {
     required: ['code'],
     optional: ['playerName']
+  },
+  [GAME_EVENTS.MAKE_MOVE]: {
+    required: ['code', 'from', 'to'],
+    optional: ['playerOrientation']
   },
   [TIMER_EVENTS.START]: {
     required: ['code'],

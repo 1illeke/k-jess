@@ -1,18 +1,20 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import './2player.css'
 import * as chess from '../../../chess.js'
+import { makeMove, listenGame } from '../../../sockets/game.js'
+import { GAME_EVENTS } from '../../../../constants/socket-events.js'
 
 
 const DURATION = 3000.0
 const clamp = (n, min, max) => Math.min(Math.max(n, min),max)
 const lerp = (x, y, a) => x * (1 - a) + y * a;
 
-const orientation = chess.Orientation.BOTTOM
-
 export default function TwoPlayerBoard({
 	paused = false,
 	boardSize = 8,
-	orientation/* or team or whatever */= chess.Orientation.BOTTOM
+	orientation/* or team or whatever */= chess.Orientation.BOTTOM,
+	gameCode = null,
+	playerOrientation = chess.Orientation.BOTTOM
 }) {
 	const largeBoard = boardSize === 14
 	const squareWidth = 1.0/boardSize*100
@@ -37,16 +39,14 @@ export default function TwoPlayerBoard({
 		}
 	}
 
-	const [pieces, setPieces] = useState([
-		...chess.spawnPieces(chess.Orientation.TOP, largeBoard),
-		...chess.spawnPieces(chess.Orientation.BOTTOM, largeBoard),
-	])
+	const [pieces, setPieces] = useState([])
+	const [gameState, setGameState] = useState(null)
 
 	const piece_lookup = {}
 	for (const piece of pieces) {
 		if (!piece.dead && piece.square) {
 			piece_lookup[piece.square] = piece
-		} else if (piece.animation && piece.team === orientation) {
+		} else if (piece.animation && piece.team === playerOrientation) {
 			piece_lookup[piece.animation.to] = piece // block moving to the same square
 			// TODO may need some tweaking
 		}
@@ -56,7 +56,7 @@ export default function TwoPlayerBoard({
 	const in_corner = ([x,y]) => (x < 3 && y < 3) || (x < 3 && y > 10) || (x > 10 && y < 3) || (x > 10 && y > 10)
 	const in_bounds = v => Boolean(squares[v[1]] && squares[v[1]][v[0]] && (!largeBoard || !in_corner(v))) 
 	const square_is_free = v => Boolean(in_bounds(v) && !piece_on_square(squares[v[1]][v[0]].name))
-	const square_is_enemy = v => Boolean(in_bounds(v) && piece_on_square(squares[v[1]][v[0]].name)?.team !== orientation)
+	const square_is_enemy = v => Boolean(in_bounds(v) && piece_on_square(squares[v[1]][v[0]].name)?.team !== playerOrientation)
 
 	let moves = []
 	if (selected && !selected.animation) {
@@ -143,7 +143,7 @@ export default function TwoPlayerBoard({
 						if (i == j) continue
 						let other = pieces[j]
 						if (other.dead) continue
-						if (other.team === orientation) continue
+						if (other.team === playerOrientation) continue
 						else {
 							const other_is_moving = other.animation
 							let other_position
@@ -203,10 +203,38 @@ export default function TwoPlayerBoard({
 		}
 	}
 
+	// Socket listeners for game state
+	useEffect(() => {
+		if (!gameCode) return
+
+		const cleanup = listenGame({
+			onGameState: (state) => {
+				setGameState(state)
+				setPieces(state.pieces || [])
+			},
+			onMoveMade: (data) => {
+				// Handle move animation or updates
+				console.log('Move made:', data)
+			}
+		})
+
+		return cleanup
+	}, [gameCode])
+
 	useEffect(()=>{
 		if (looping) return
 		setLooping(true)
 		frame()
+	}, [])
+
+	// Real-time cooldown updates
+	useEffect(() => {
+		const interval = setInterval(() => {
+			// Force re-render to update cooldown display
+			setPieces(prev => [...prev])
+		}, 100) // Update every 100ms for smooth cooldown animation
+
+		return () => clearInterval(interval)
 	}, [])
 
 
@@ -236,19 +264,62 @@ export default function TwoPlayerBoard({
 					}
 				}
 
-				const myPiece = piece.team === orientation
+				const myPiece = piece.team === playerOrientation
+				const isOnCooldown = piece.cooldown && piece.cooldown > Date.now()
+				const canClick = myPiece && !isOnCooldown
 				let [x, y] = piece.position || square_lookup[piece.square]
-				return (<img
-					draggable="false"
-					onClick={myPiece? click : null}
-					src={chess.filenames[piece.team][piece.type]}
-					key={i}
-					className={`chess-piece ${selected?.square === piece.square? 'selected':''}`}
-					style={{ left: `${x*squareWidth}%`, top: `${y*squareWidth}%`,
-							width: `${squareWidth}%`,
-							height: `${squareWidth}%`,
-					}}
-				/>)
+				
+				// Calculate cooldown percentage for visual feedback
+				let cooldownPercent = 0
+				if (isOnCooldown && myPiece) {
+					const cooldownTimes = {
+						[chess.Piece.PAWN]: 1000,
+						[chess.Piece.KNIGHT]: 2000,
+						[chess.Piece.BISHOP]: 2000,
+						[chess.Piece.ROOK]: 3000,
+						[chess.Piece.QUEEN]: 4000,
+						[chess.Piece.KING]: 5000
+					}
+					const totalCooldown = cooldownTimes[piece.type] || 1000
+					const remaining = piece.cooldown - Date.now()
+					cooldownPercent = Math.max(0, (remaining / totalCooldown) * 100)
+				}
+				
+				return (
+					<div key={i} style={{ 
+						position: 'absolute',
+						left: `${x*squareWidth}%`, 
+						top: `${y*squareWidth}%`,
+						width: `${squareWidth}%`,
+						height: `${squareWidth}%`,
+					}}>
+						<img
+							draggable="false"
+							onClick={canClick ? click : null}
+							src={chess.filenames[piece.team][piece.type]}
+							className={`chess-piece ${selected?.square === piece.square? 'selected':''} ${!canClick ? 'disabled' : ''}`}
+							style={{ 
+								width: '100%',
+								height: '100%',
+							}}
+						/>
+						{isOnCooldown && myPiece && (
+							<div 
+								className="cooldown-overlay"
+								style={{
+									position: 'absolute',
+									top: 0,
+									left: 0,
+									width: '100%',
+									height: '100%',
+									background: `conic-gradient(from 0deg, rgba(255,0,0,0.3) ${cooldownPercent}%, transparent ${cooldownPercent}%)`,
+									pointerEvents: 'none',
+									borderRadius: '50%'
+								}}
+							/>
+						)}
+					</div>
+				)
 			})}
 
 			{moves.map((m,i) => {
@@ -256,21 +327,42 @@ export default function TwoPlayerBoard({
 				const click = (e) => {
 					if (selected.animation) return
 					let from = selected.square
+					let to = squares[y][x].name
 					setSelected(null)
-					setPieces(prev => {
-						const piece = piece_on_square(from)
-						if (piece.square) {
-							piece.position = square_lookup[piece.square]
-							piece.hasMoved = true
-							piece.animation = {
-								from: piece.square,
-								to: squares[y][x].name,
-								time: 0
+					
+					// Send move to backend
+					if (gameCode) {
+						makeMove({
+							code: gameCode,
+							from: from,
+							to: to,
+							playerOrientation: playerOrientation
+						}, {
+							onMoveMade: (response) => {
+								console.log('Move successful:', response)
+							},
+							onError: (error) => {
+								console.error('Move failed:', error)
+								// Could show error message to user
 							}
-							delete piece.square
-						}
-						return prev
-					})
+						})
+					} else {
+						// Fallback to local move for offline play
+						setPieces(prev => {
+							const piece = piece_on_square(from)
+							if (piece.square) {
+								piece.position = square_lookup[piece.square]
+								piece.hasMoved = true
+								piece.animation = {
+									from: piece.square,
+									to: to,
+									time: 0
+								}
+								delete piece.square
+							}
+							return prev
+						})
+					}
 				}
 				return <div
 					onClick={click}

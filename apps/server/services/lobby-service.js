@@ -69,14 +69,21 @@ export class LobbyService {
     }
 
     if (existingPlayer) {
-      // Rejoin - update socket ID
+      // Rejoin - update socket ID but keep original name
       if (existingPlayer.socketId !== socketId) {
         lobby.players.delete(existingPlayer.socketId);
       }
       existingPlayer.socketId = socketId;
       existingPlayer.connected = true;
-      existingPlayer.name = name;
+      // Don't update name for rejoining players - keep original name
       lobby.players.set(socketId, existingPlayer);
+      
+      // Cancel cleanup timer since lobby is no longer empty
+      if (lobby.cleanupTimer) {
+        clearTimeout(lobby.cleanupTimer);
+        lobby.cleanupTimer = null;
+      }
+      
       return existingPlayer;
     }
 
@@ -99,6 +106,12 @@ export class LobbyService {
 
     lobby.players.set(socketId, player);
     
+    // Cancel cleanup timer since lobby is no longer empty
+    if (lobby.cleanupTimer) {
+      clearTimeout(lobby.cleanupTimer);
+      lobby.cleanupTimer = null;
+    }
+    
     return player;
   }
 
@@ -111,9 +124,22 @@ export class LobbyService {
 
     lobby.players.delete(socketId);
 
-    // If lobby is empty, clean it up
+    // If lobby is empty, schedule cleanup with a delay to allow for reconnection
     if (lobby.players.size === 0) {
-      this.lobbies.delete(code);
+      // Clear any existing cleanup timer for this lobby
+      if (lobby.cleanupTimer) {
+        clearTimeout(lobby.cleanupTimer);
+      }
+      
+      // Schedule cleanup after 30 seconds to allow for reconnection
+      lobby.cleanupTimer = setTimeout(() => {
+        // Double-check the lobby is still empty before deleting
+        const currentLobby = this.getLobby(code);
+        if (currentLobby && currentLobby.players.size === 0) {
+          this.lobbies.delete(code);
+        }
+      }, 30000); // 30 seconds delay
+      
     } else if (lobby.hostId === socketId) {
       // Transfer host to another player
       const newHost = Array.from(lobby.players.values()).find(p => p.connected);
@@ -229,4 +255,13 @@ export class LobbyService {
     };
   }
 
+  // Clean up all timers (useful for server shutdown)
+  cleanup() {
+    for (const [code, lobby] of this.lobbies.entries()) {
+      if (lobby.cleanupTimer) {
+        clearTimeout(lobby.cleanupTimer);
+        lobby.cleanupTimer = null;
+      }
+    }
+  }
 }

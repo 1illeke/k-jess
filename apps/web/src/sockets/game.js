@@ -56,17 +56,38 @@ export function quitGame({ code, playerName }, { onEnded, onNavigate } = {}) {
   socket.once(GAME_EVENTS.NAVIGATE_AWAY, handleNavigate)
 }
 
+export function makeMove({ code, from, to, playerOrientation }, { onMoveMade, onError } = {}) {
+  const handleMoveMade = (payload) => onMoveMade?.(payload)
+  const handleError = (payload) => onError?.(payload)
+
+  // Use acknowledgement for immediate feedback
+  socket.emit(GAME_EVENTS.MAKE_MOVE, { code, from, to, playerOrientation }, (response) => {
+    if (response?.success) {
+      onMoveMade?.(response);
+    } else {
+      onError?.({ reason: 'MOVE_FAILED', details: response?.error || 'Failed to make move' });
+    }
+  })
+  
+  socket.once(GAME_EVENTS.MOVE_MADE, handleMoveMade)
+  socket.once(GAME_EVENTS.ERROR, handleError)
+}
+
 // Listeners
-export function listenGame({ onStarted, onPaused, onResumed, onEnded } = {}) {
+export function listenGame({ onStarted, onPaused, onResumed, onEnded, onMoveMade, onGameState } = {}) {
   if (onStarted) socket.on(GAME_EVENTS.STARTED, onStarted)
   if (onPaused) socket.on(GAME_EVENTS.PAUSED, onPaused)
   if (onResumed) socket.on(GAME_EVENTS.RESUMED, onResumed)
   if (onEnded) socket.on(GAME_EVENTS.ENDED, onEnded)
+  if (onMoveMade) socket.on(GAME_EVENTS.MOVE_MADE, onMoveMade)
+  if (onGameState) socket.on(GAME_EVENTS.GAME_STATE, onGameState)
   return () => {
     if (onStarted) socket.off(GAME_EVENTS.STARTED, onStarted)
     if (onPaused) socket.off(GAME_EVENTS.PAUSED, onPaused)
     if (onResumed) socket.off(GAME_EVENTS.RESUMED, onResumed)
     if (onEnded) socket.off(GAME_EVENTS.ENDED, onEnded)
+    if (onMoveMade) socket.off(GAME_EVENTS.MOVE_MADE, onMoveMade)
+    if (onGameState) socket.off(GAME_EVENTS.GAME_STATE, onGameState)
   }
 }
 
