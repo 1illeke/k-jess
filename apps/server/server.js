@@ -539,13 +539,18 @@ io.on('connection', (socket) => {
   socket.on(GAME_EVENTS.MAKE_MOVE, (data, ack) => {
     try {
       const { code, from, to, playerOrientation } = data || {};
+      console.log('=== BACKEND MOVE DEBUG ===');
+      console.log('Move data:', { code, from, to, playerOrientation });
+      
       if (!code || !from || !to) {
+        console.log('Missing required fields');
         if (ack) ack({ success: false, error: 'Missing required fields' });
         return;
       }
 
       const lobby = lobbyService.getLobby(code);
       if (!lobby) {
+        console.log('Game not found');
         if (ack) ack({ success: false, error: 'Game not found' });
         return;
       }
@@ -553,13 +558,21 @@ io.on('connection', (socket) => {
       // Get or create chess engine for this game
       let chessEngine = chessEngines.get(code);
       if (!chessEngine) {
+        console.log('Creating new chess engine');
         chessEngine = new ChessEngine(code, lobby.settings);
         chessEngines.set(code, chessEngine);
       }
 
+      console.log('Current player in engine:', chessEngine.currentPlayer);
+      console.log('Player orientation:', playerOrientation);
+      console.log('Is player turn?', chessEngine.currentPlayer === playerOrientation);
+
       // Make the move
       const result = chessEngine.makeMove(from, to, playerOrientation);
+      console.log('Move result:', result);
+      
       if (!result.success) {
+        console.log('Move failed:', result.error);
         if (ack) ack({ success: false, error: result.error });
         return;
       }
@@ -574,7 +587,7 @@ io.on('connection', (socket) => {
             const player = lobby.players.get(socketId);
             const playerOrientation = getPlayerOrientation(lobby, player);
             
-            // Send mirrored game state for this player
+            // Send game state for this specific player's perspective
             const gameState = chessEngine.getGameStateForPlayer(playerOrientation);
             playerSocket.emit(GAME_EVENTS.GAME_STATE, gameState);
           }

@@ -27,7 +27,7 @@ export default function TwoPlayerBoard({
 		for (let r = 0; r < boardSize; r++) {
 			let rank = []
 			for (let f = 0; f < boardSize; f++) {
-				let name = chess.getSquare(orientation, [f,r], largeBoard)
+				let name = chess.getSquare(playerOrientation, [f,r], largeBoard)
 				square_lookup[name] = [f,r]
 				rank.push({
 					position: [f,r],
@@ -256,10 +256,23 @@ export default function TwoPlayerBoard({
 			{pieces.map((piece, i) => {
 				if (piece.dead) return
 				const click = () => {
-					if (piece.animation) return
+					console.log('=== PIECE CLICK DEBUG ===')
+					console.log('Clicked piece:', piece)
+					console.log('Piece team:', piece.team)
+					console.log('Player orientation:', playerOrientation)
+					console.log('Is my piece?', piece.team === playerOrientation)
+					console.log('Piece animation:', piece.animation)
+					console.log('Can click?', canClick)
+					
+					if (piece.animation) {
+						console.log('Piece click blocked: piece is animating')
+						return
+					}
 					if (selected?.square === piece.square) {
+						console.log('Deselecting piece')
 						setSelected(null)
 					} else {
+						console.log('Selecting piece')
 						setSelected(piece)
 					}
 				}
@@ -325,13 +338,28 @@ export default function TwoPlayerBoard({
 			{moves.map((m,i) => {
 				const [x, y] = m
 				const click = (e) => {
-					if (selected.animation) return
+					console.log('=== MOVE CLICK DEBUG ===')
+					console.log('Selected piece:', selected)
+					console.log('Player orientation:', playerOrientation)
+					console.log('Selected piece team:', selected?.team)
+					console.log('Is my piece?', selected?.team === playerOrientation)
+					console.log('Animation check:', selected.animation)
+					console.log('Game code:', gameCode)
+					
+					if (selected.animation) {
+						console.log('Move blocked: piece is animating')
+						return
+					}
+					
 					let from = selected.square
 					let to = squares[y][x].name
+					console.log('Move from:', from, 'to:', to)
+					
 					setSelected(null)
 					
 					// Send move to backend
 					if (gameCode) {
+						console.log('Sending move to backend...')
 						makeMove({
 							code: gameCode,
 							from: from,
@@ -347,6 +375,7 @@ export default function TwoPlayerBoard({
 							}
 						})
 					} else {
+						console.log('Using local move fallback...')
 						// Fallback to local move for offline play
 						setPieces(prev => {
 							const piece = piece_on_square(from)
