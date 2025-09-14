@@ -14,41 +14,70 @@ export const Piece = {
 	PAWN: 5,
 }
 
+// Import all piece images using Vite's asset system
+import topKing from '/pieces/top_king.png'
+import topQueen from '/pieces/top_queen.png'
+import topRook from '/pieces/top_rook.png'
+import topBishop from '/pieces/top_bishop.png'
+import topKnight from '/pieces/top_knight.png'
+import topPawn from '/pieces/top_pawn.png'
+
+import rightKing from '/pieces/right_king.png'
+import rightQueen from '/pieces/right_queen.png'
+import rightRook from '/pieces/right_rook.png'
+import rightBishop from '/pieces/right_bishop.png'
+import rightKnight from '/pieces/right_knight.png'
+import rightPawn from '/pieces/right_pawn.png'
+
+import bottomKing from '/pieces/bottom_king.png'
+import bottomQueen from '/pieces/bottom_queen.png'
+import bottomRook from '/pieces/bottom_rook.png'
+import bottomBishop from '/pieces/bottom_bishop.png'
+import bottomKnight from '/pieces/bottom_knight.png'
+import bottomPawn from '/pieces/bottom_pawn.png'
+
+import leftKing from '/pieces/left_king.png'
+import leftQueen from '/pieces/left_queen.png'
+import leftRook from '/pieces/left_rook.png'
+import leftBishop from '/pieces/left_bishop.png'
+import leftKnight from '/pieces/left_knight.png'
+import leftPawn from '/pieces/left_pawn.png'
+
 export let filenames = []
 filenames[Orientation.TOP] = [
-	"/pieces/top_king.png",
-	"/pieces/top_queen.png",
-	"/pieces/top_rook.png",
-	"/pieces/top_bishop.png",
-	"/pieces/top_knight.png",
-	"/pieces/top_pawn.png",
+	topKing,
+	topQueen,
+	topRook,
+	topBishop,
+	topKnight,
+	topPawn,
 ]
 
 filenames[Orientation.RIGHT] = [
-	"/pieces/right_king.png",
-	"/pieces/right_queen.png",
-	"/pieces/right_rook.png",
-	"/pieces/right_bishop.png",
-	"/pieces/right_knight.png",
-	"/pieces/right_pawn.png",
+	rightKing,
+	rightQueen,
+	rightRook,
+	rightBishop,
+	rightKnight,
+	rightPawn,
 ]
 
 filenames[Orientation.BOTTOM] = [
-	"/pieces/bottom_king.png",
-	"/pieces/bottom_queen.png",
-	"/pieces/bottom_rook.png",
-	"/pieces/bottom_bishop.png",
-	"/pieces/bottom_knight.png",
-	"/pieces/bottom_pawn.png",
+	bottomKing,
+	bottomQueen,
+	bottomRook,
+	bottomBishop,
+	bottomKnight,
+	bottomPawn,
 ]
 
 filenames[Orientation.LEFT] = [
-	"/pieces/left_king.png",
-	"/pieces/left_queen.png",
-	"/pieces/left_rook.png",
-	"/pieces/left_bishop.png",
-	"/pieces/left_knight.png",
-	"/pieces/left_pawn.png",
+	leftKing,
+	leftQueen,
+	leftRook,
+	leftBishop,
+	leftKnight,
+	leftPawn,
 ]
 export function getSquare(orientation, [x, y], largeBoard) {
 	if (largeBoard) {

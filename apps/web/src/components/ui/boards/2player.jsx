@@ -5,22 +5,22 @@ import { makeMove, listenGame } from '../../../sockets/game.js'
 
 
 const DURATION = 3000.0
-const clamp = (n, min, max) => Math.min(Math.max(n, min),max)
+const clamp = (n, min, max) => Math.min(Math.max(n, min), max)
 const lerp = (x, y, a) => x * (1 - a) + y * a;
 
 export default function TwoPlayerBoard({
 	paused = false,
 	boardSize = 8,
-	orientation/* or team or whatever */= chess.Orientation.BOTTOM,
+	orientation/* or team or whatever */ = chess.Orientation.BOTTOM,
 	gameCode = null,
 	playerOrientation = chess.Orientation.BOTTOM,
 	onGameOver = null,
 	onCheck = null
 }) {
 	const largeBoard = boardSize === 14
-	const squareWidth = 1.0/boardSize*100
+	const squareWidth = 1.0 / boardSize * 100
 
-  const [selected, setSelected] = useState(null)
+	const [selected, setSelected] = useState(null)
 
 	let square_lookup = {}
 	const squares = []
@@ -28,12 +28,12 @@ export default function TwoPlayerBoard({
 		for (let r = 0; r < boardSize; r++) {
 			let rank = []
 			for (let f = 0; f < boardSize; f++) {
-				let name = chess.getSquare(playerOrientation, [f,r], largeBoard)
-				square_lookup[name] = [f,r]
+				let name = chess.getSquare(playerOrientation, [f, r], largeBoard)
+				square_lookup[name] = [f, r]
 				rank.push({
-					position: [f,r],
-					name, 
-					white: (r+f)%2==0
+					position: [f, r],
+					name,
+					white: (r + f) % 2 == 0
 				})
 			}
 			squares.push(rank)
@@ -53,8 +53,8 @@ export default function TwoPlayerBoard({
 	}
 
 	const piece_on_square = sq => piece_lookup[sq]
-	const in_corner = ([x,y]) => (x < 3 && y < 3) || (x < 3 && y > 10) || (x > 10 && y < 3) || (x > 10 && y > 10)
-	const in_bounds = v => Boolean(squares[v[1]] && squares[v[1]][v[0]] && (!largeBoard || !in_corner(v))) 
+	const in_corner = ([x, y]) => (x < 3 && y < 3) || (x < 3 && y > 10) || (x > 10 && y < 3) || (x > 10 && y > 10)
+	const in_bounds = v => Boolean(squares[v[1]] && squares[v[1]][v[0]] && (!largeBoard || !in_corner(v)))
 	const square_is_free = v => Boolean(in_bounds(v) && !piece_on_square(squares[v[1]][v[0]].name))
 	const square_is_enemy = v => Boolean(in_bounds(v) && piece_on_square(squares[v[1]][v[0]].name)?.team !== playerOrientation)
 
@@ -76,13 +76,13 @@ export default function TwoPlayerBoard({
 
 		switch (selected.type) {
 			case chess.Piece.PAWN:
-				add_move_if_valid([0,-1], true, false) &&
-					!selected.hasMoved && add_move_if_valid([0,-2], true, false) // 1st move can be 2 squares
-				add_move_if_valid([1,-1], false, true)
-				add_move_if_valid([-1,-1], false, true)
+				add_move_if_valid([0, -1], true, false) &&
+					!selected.hasMoved && add_move_if_valid([0, -2], true, false) // 1st move can be 2 squares
+				add_move_if_valid([1, -1], false, true)
+				add_move_if_valid([-1, -1], false, true)
 				break
 			case chess.Piece.ROOK:
-				for (let dir of [[0,1],[1,0],[-1,0],[0,-1]]) {
+				for (let dir of [[0, 1], [1, 0], [-1, 0], [0, -1]]) {
 					let range = 1
 					while (add_move_if_valid(chess.mul(dir, range))) {
 						range += 1
@@ -90,7 +90,7 @@ export default function TwoPlayerBoard({
 				}
 				break
 			case chess.Piece.BISHOP:
-				for (let dir of [[-1,1],[1,-1],[-1,-1],[1,1]]) {
+				for (let dir of [[-1, 1], [1, -1], [-1, -1], [1, 1]]) {
 					let range = 1
 					while (add_move_if_valid(chess.mul(dir, range))) {
 						range += 1
@@ -98,7 +98,7 @@ export default function TwoPlayerBoard({
 				}
 				break
 			case chess.Piece.QUEEN:
-				for (let dir of [[-1,1],[1,-1],[-1,-1],[1,1],[0,1],[1,0],[-1,0],[0,-1]]) {
+				for (let dir of [[-1, 1], [1, -1], [-1, -1], [1, 1], [0, 1], [1, 0], [-1, 0], [0, -1]]) {
 					let range = 1
 					while (add_move_if_valid(chess.mul(dir, range))) {
 						range += 1
@@ -106,13 +106,13 @@ export default function TwoPlayerBoard({
 				}
 				break
 			case chess.Piece.KING:
-				for (let dir of [[-1,1],[1,-1],[-1,-1],[1,1],[0,1],[1,0],[-1,0],[0,-1]]) {
+				for (let dir of [[-1, 1], [1, -1], [-1, -1], [1, 1], [0, 1], [1, 0], [-1, 0], [0, -1]]) {
 					let range = 1
 					add_move_if_valid(chess.mul(dir, range))
 				}
 				break
 			case chess.Piece.KNIGHT:
-				for (let point of [[1,2],[1,-2],[2,1],[2,-1]]) {
+				for (let point of [[1, 2], [1, -2], [2, 1], [2, -1]]) {
 					add_move_if_valid(point)
 					add_move_if_valid(chess.neg(point))
 				}
@@ -153,7 +153,7 @@ export default function TwoPlayerBoard({
 								other_position = other.position
 							}
 							let diff = chess.abs(chess.sub(piece.position, other_position))
-							const length = ([x,y]) => Math.sqrt(x*x+y*y)
+							const length = ([x, y]) => Math.sqrt(x * x + y * y)
 							const distance = length(diff)
 							// TODO tweak distance and check for king?
 							if (distance < 0.5) {
@@ -175,7 +175,7 @@ export default function TwoPlayerBoard({
 
 					piece.animation.time += delta
 					const elapsed = clamp(
-						piece.animation.time/DURATION,
+						piece.animation.time / DURATION,
 						0.0, 1.0)
 
 					let [x, y] = square_lookup[piece.animation.from]
@@ -193,7 +193,7 @@ export default function TwoPlayerBoard({
 						piece.square = squares[y][x].name
 
 						// promotion
-						if (piece.type === chess.Piece.PAWN && y <= boardSize-8) {
+						if (piece.type === chess.Piece.PAWN && y <= boardSize - 8) {
 							piece.type = chess.Piece.QUEEN
 						}
 					}
@@ -217,7 +217,7 @@ export default function TwoPlayerBoard({
 			},
 			onCheckmate: (data) => {
 				console.log('Checkmate detected:', data)
-				
+
 				// Pass game over data to parent component
 				if (onGameOver) {
 					const isPlayerWin = data.loser !== playerOrientation
@@ -230,7 +230,7 @@ export default function TwoPlayerBoard({
 			},
 			onStalemate: (data) => {
 				console.log('Stalemate detected:', data)
-				
+
 				if (onGameOver) {
 					onGameOver({
 						type: 'stalemate',
@@ -241,7 +241,7 @@ export default function TwoPlayerBoard({
 			},
 			onGameOver: (data) => {
 				console.log('Game over:', data)
-				
+
 				if (onGameOver) {
 					let winner = false // Draw by default
 					if (data.reason === 'checkmate') {
@@ -249,7 +249,7 @@ export default function TwoPlayerBoard({
 					} else if (data.reason === 'only_one_team_remaining') {
 						winner = data.winner && data.winner.includes(playerOrientation)
 					}
-					
+
 					onGameOver({
 						type: 'game_over',
 						winner: winner,
@@ -262,25 +262,25 @@ export default function TwoPlayerBoard({
 		return cleanup
 	}, [gameCode])
 
-	useEffect(()=>{
+	useEffect(() => {
 		if (looping) return
 		setLooping(true)
 		frame()
 	}, [])
 
-	// Real-time cooldown updates
+	// Real-time cooldown updates - increased frequency for smoother animation
 	useEffect(() => {
 		const interval = setInterval(() => {
 			// Force re-render to update cooldown display
 			setPieces(prev => [...prev])
-		}, 100) // Update every 100ms for smooth cooldown animation
+		}, 50) // Update every 50ms for smoother cooldown animation
 
 		return () => clearInterval(interval)
 	}, [])
 
 
-  return <div className="chess-board">
-			<div className="chess-squares" style={{'--grid-size': boardSize}}>
+	return <div className="chess-board">
+		<div className="chess-squares" style={{ '--grid-size': boardSize }}>
 			{squares.flat().map((square, i) => {
 				let classes = ['chess-square']
 				// don't color corners
@@ -288,161 +288,162 @@ export default function TwoPlayerBoard({
 					classes.push(square.white ? 'light' : 'dark')
 				}
 				return <div
-				key={i}
-				className={classes.filter(Boolean).join(' ')}>
+					key={i}
+					className={classes.filter(Boolean).join(' ')}>
 				</div>
 			})}
-			</div>
+		</div>
 
-			{pieces.map((piece, i) => {
-				if (piece.dead) return
-				const click = () => {
-					console.log('=== PIECE CLICK DEBUG ===')
-					console.log('Clicked piece:', piece)
-					console.log('Piece team:', piece.team)
-					console.log('Player orientation:', playerOrientation)
-					console.log('Is my piece?', piece.team === playerOrientation)
-					console.log('Piece animation:', piece.animation)
-					console.log('Can click?', canClick)
-					
-					if (piece.animation) {
-						console.log('Piece click blocked: piece is animating')
-						return
-					}
-					if (selected?.square === piece.square) {
-						console.log('Deselecting piece')
-						setSelected(null)
-					} else {
-						console.log('Selecting piece')
-						setSelected(piece)
-					}
-				}
+		{pieces.map((piece, i) => {
+			if (piece.dead) return
+			const click = () => {
+				console.log('=== PIECE CLICK DEBUG ===')
+				console.log('Clicked piece:', piece)
+				console.log('Piece team:', piece.team)
+				console.log('Player orientation:', playerOrientation)
+				console.log('Is my piece?', piece.team === playerOrientation)
+				console.log('Piece animation:', piece.animation)
+				console.log('Can click?', canClick)
 
-				const myPiece = piece.team === playerOrientation
-				const isOnCooldown = piece.cooldown && piece.cooldown > Date.now()
-				const canClick = myPiece && !isOnCooldown
-				let [x, y] = piece.position || square_lookup[piece.square]
-				
-				// Calculate cooldown percentage for visual feedback (show for ALL pieces)
-				let cooldownPercent = 0
-				if (isOnCooldown && myPiece) {
-					const cooldownTimes = {
-						[chess.Piece.PAWN]: 1000,
-						[chess.Piece.KNIGHT]: 2000,
-						[chess.Piece.BISHOP]: 2000,
-						[chess.Piece.ROOK]: 3000,
-						[chess.Piece.QUEEN]: 4000,
-						[chess.Piece.KING]: 5000
-					}
-					const totalCooldown = cooldownTimes[piece.type] || 1000
-					const remaining = piece.cooldown - Date.now()
-					cooldownPercent = Math.max(0, (remaining / totalCooldown) * 100)
+				if (piece.animation) {
+					console.log('Piece click blocked: piece is animating')
+					return
 				}
-				
-				return (
-					<div key={i} style={{ 
-						position: 'absolute',
-						left: `${x*squareWidth}%`, 
-						top: `${y*squareWidth}%`,
-						width: `${squareWidth}%`,
-						height: `${squareWidth}%`,
-					}}>
-						<img
-							draggable="false"
-							onClick={canClick ? click : null}
-							src={chess.filenames[piece.team][piece.type]}
-							className={`chess-piece ${selected?.square === piece.square? 'selected':''} ${!canClick ? 'disabled' : ''}`}
-							style={{ 
+				if (selected?.square === piece.square) {
+					console.log('Deselecting piece')
+					setSelected(null)
+				} else {
+					console.log('Selecting piece')
+					setSelected(piece)
+				}
+			}
+
+			const myPiece = piece.team === playerOrientation
+			const isOnCooldown = piece.cooldown && piece.cooldown > Date.now()
+			const canClick = myPiece && !isOnCooldown
+			let [x, y] = piece.position || square_lookup[piece.square]
+
+			// Calculate cooldown percentage for visual feedback (show for ALL pieces)
+			let cooldownPercent = 0
+			if (isOnCooldown) {
+				const cooldownTimes = {
+					[chess.Piece.PAWN]: 1000,
+					[chess.Piece.KNIGHT]: 2000,
+					[chess.Piece.BISHOP]: 2000,
+					[chess.Piece.ROOK]: 3000,
+					[chess.Piece.QUEEN]: 4000,
+					[chess.Piece.KING]: 5000
+				}
+				const totalCooldown = cooldownTimes[piece.type] || 1000
+				const remaining = piece.cooldown - Date.now()
+				cooldownPercent = Math.max(0, (remaining / totalCooldown) * 100)
+			}
+
+			return (
+				<div key={i} style={{
+					position: 'absolute',
+					left: `${x * squareWidth}%`,
+					top: `${y * squareWidth}%`,
+					width: `${squareWidth}%`,
+					height: `${squareWidth}%`,
+				}}>
+					<img
+						draggable="false"
+						onClick={canClick ? click : null}
+						src={chess.filenames[piece.team][piece.type]}
+						className={`chess-piece ${selected?.square === piece.square ? 'selected' : ''} ${!canClick ? 'disabled' : ''}`}
+						style={{
+							width: '100%',
+							height: '100%',
+						}}
+					/>
+					{isOnCooldown && (
+						<div
+							className="cooldown-overlay"
+							style={{
+								position: 'absolute',
+								top: 0,
+								left: 0,
 								width: '100%',
 								height: '100%',
+								background: `conic-gradient(from 0deg, ${myPiece ? 'rgba(255,0,0,0.4)' : 'rgba(255,165,0,0.3)'} ${cooldownPercent}%, transparent ${cooldownPercent}%)`,
+								pointerEvents: 'none',
+								borderRadius: '50%'
 							}}
 						/>
-						{isOnCooldown && myPiece && (
-							<div 
-								className="cooldown-overlay"
-								style={{
-									position: 'absolute',
-									top: 0,
-									left: 0,
-									width: '100%',
-									height: '100%',
-									background: `conic-gradient(from 0deg, ${myPiece ? 'rgba(255,0,0,0.4)' : 'rgba(255,165,0,0.3)'} ${cooldownPercent}%, transparent ${cooldownPercent}%)`,
-									pointerEvents: 'none',
-									borderRadius: '50%'
-								}}
-							/>
-						)}
-					</div>
-				)
-			})}
+					)}
+				</div>
+			)
+		})}
 
-			{moves.map((m,i) => {
-				const [x, y] = m
-				const click = (e) => {
-					console.log('=== MOVE CLICK DEBUG ===')
-					console.log('Selected piece:', selected)
-					console.log('Player orientation:', playerOrientation)
-					console.log('Selected piece team:', selected?.team)
-					console.log('Is my piece?', selected?.team === playerOrientation)
-					console.log('Animation check:', selected.animation)
-					console.log('Game code:', gameCode)
-					
-					if (selected.animation) {
-						console.log('Move blocked: piece is animating')
-						return
-					}
-					
-					let from = selected.square
-					let to = squares[y][x].name
-					console.log('Move from:', from, 'to:', to)
-					
-					setSelected(null)
-					
-					// Send move to backend
-					if (gameCode) {
-						console.log('Sending move to backend...')
-						makeMove({
-							code: gameCode,
-							from: from,
-							to: to,
-							playerOrientation: playerOrientation
-						}, {
-							onMoveMade: (response) => {
-								console.log('Move successful:', response)
-							},
-							onError: (error) => {
-								console.error('Move failed:', error)
-								// Could show error message to user
-							}
-						})
-					} else {
-						console.log('Using local move fallback...')
-						// Fallback to local move for offline play
-						setPieces(prev => {
-							const piece = piece_on_square(from)
-							if (piece.square) {
-								piece.position = square_lookup[piece.square]
-								piece.hasMoved = true
-								piece.animation = {
-									from: piece.square,
-									to: to,
-									time: 0
-								}
-								delete piece.square
-							}
-							return prev
-						})
-					}
+		{moves.map((m, i) => {
+			const [x, y] = m
+			const click = (e) => {
+				console.log('=== MOVE CLICK DEBUG ===')
+				console.log('Selected piece:', selected)
+				console.log('Player orientation:', playerOrientation)
+				console.log('Selected piece team:', selected?.team)
+				console.log('Is my piece?', selected?.team === playerOrientation)
+				console.log('Animation check:', selected.animation)
+				console.log('Game code:', gameCode)
+
+				if (selected.animation) {
+					console.log('Move blocked: piece is animating')
+					return
 				}
-				return <div
-					onClick={click}
-					key={i}
-					className="move"
-					style={{ left: `${x*squareWidth}%`, top: `${y*squareWidth}%`,
-							width: `${squareWidth}%`,
-							height: `${squareWidth}%`,
-					}}
-					/>
-			})}
-		</div>
+
+				let from = selected.square
+				let to = squares[y][x].name
+				console.log('Move from:', from, 'to:', to)
+
+				setSelected(null)
+
+				// Send move to backend
+				if (gameCode) {
+					console.log('Sending move to backend...')
+					makeMove({
+						code: gameCode,
+						from: from,
+						to: to,
+						playerOrientation: playerOrientation
+					}, {
+						onMoveMade: (response) => {
+							console.log('Move successful:', response)
+						},
+						onError: (error) => {
+							console.error('Move failed:', error)
+							// Could show error message to user
+						}
+					})
+				} else {
+					console.log('Using local move fallback...')
+					// Fallback to local move for offline play
+					setPieces(prev => {
+						const piece = piece_on_square(from)
+						if (piece.square) {
+							piece.position = square_lookup[piece.square]
+							piece.hasMoved = true
+							piece.animation = {
+								from: piece.square,
+								to: to,
+								time: 0
+							}
+							delete piece.square
+						}
+						return prev
+					})
+				}
+			}
+			return <div
+				onClick={click}
+				key={i}
+				className="move"
+				style={{
+					left: `${x * squareWidth}%`, top: `${y * squareWidth}%`,
+					width: `${squareWidth}%`,
+					height: `${squareWidth}%`,
+				}}
+			/>
+		})}
+	</div>
 }
