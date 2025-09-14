@@ -20,14 +20,14 @@ function LandingPage() {
 
     // Fetch initial count
     // In development, use proxy (same origin). In production, use environment variable
-    const apiUrl = import.meta.env.DEV 
+    const apiUrl = import.meta.env.DEV
       ? '/api/online-count'  // Uses vite proxy in development
       : `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000'}/api/online-count`
-    
+
     fetch(apiUrl)
       .then(res => res.json())
       .then(data => setOnlineCount(data.onlineCount))
-      .catch(() => {}) // Fail silently
+      .catch(() => { }) // Fail silently
 
     return () => {
       socket.off('online-count-update', handleOnlineCountUpdate)
@@ -65,7 +65,7 @@ function LandingPage() {
   }
 
   const renderInfoContent = () => {
-    switch(selectedInfoSection) {
+    switch (selectedInfoSection) {
       case 'General':
         return (
           <div>
@@ -106,6 +106,22 @@ function LandingPage() {
             <p>Master the art of multi-front warfare in this intense 4-way battle.</p>
           </div>
         )
+      case 'Changelog':
+        return (
+          <div>
+            <h4>Version 0.1.15</h4>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Code formatting improvements</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Various fixes</li>
+            </ul>
+            <h4>Version 0.1.14</h4>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Fixed audio issues</li>
+              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added visual cooldowns for enemy players</li>
+              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Uploaded semi working project for testing purposes</li>
+            </ul>
+          </div>
+        )
       default:
         return <p>Select a section to learn more about K/Jess.</p>
     }
@@ -122,13 +138,13 @@ function LandingPage() {
       >
         [ Feedback ]
       </Button>
-      
+
       <div className="container">
         <header className="header">
           <h1 className="title">K/Jess</h1>
           <p className="tagline">The chaotic chess game that you never needed</p>
         </header>
-        
+
         <main className="main">
           <div className="button-group">
             <Button to="/lobby" variant="primary" borderStyle="solid">
@@ -139,7 +155,7 @@ function LandingPage() {
             </Button>
           </div>
         </main>
-        
+
         <footer className="footer">
           <div className="wireframe-box">
             <span>Current online players: {onlineCount}</span>
@@ -147,7 +163,7 @@ function LandingPage() {
         </footer>
       </div>
 
-      <Modal 
+      <Modal
         isOpen={isInfoModalOpen}
         onClose={handleCloseModal}
         title="K/jess Info"
@@ -156,7 +172,7 @@ function LandingPage() {
         <div className="info-modal-content">
           {/* Left Navigation */}
           <div className="info-navigation">
-            {['General', 'Concept', '2 Player', '3 Player', '4 Player'].map((section) => (
+            {['General', 'Concept', '2 Player', '3 Player', '4 Player', 'Changelog'].map((section) => (
               <Button
                 key={section}
                 variant={selectedInfoSection === section ? "primary" : "secondary"}
@@ -177,24 +193,24 @@ function LandingPage() {
         </div>
       </Modal>
 
-             <Modal 
-         isOpen={isWipModalOpen}
-         onClose={handleCloseWipModal}
-         title="Work in Progress"
-         className="wip-modal"
-       >
-         <div className="wip-modal-content">
-           <p>This is a Work In Progress project.</p>
-           <p>Currently features may be broken or not added yet.</p>
-         </div>
-       </Modal>
-       
-       {/* Feedback Modal */}
-       <FeedbackModal
-         isOpen={showFeedbackModal}
-         onClose={() => setShowFeedbackModal(false)}
-         playerName="Guest"
-       />
+      <Modal
+        isOpen={isWipModalOpen}
+        onClose={handleCloseWipModal}
+        title="Work in Progress"
+        className="wip-modal"
+      >
+        <div className="wip-modal-content">
+          <p>This is a Work In Progress project.</p>
+          <p>Currently features may be broken or not added yet.</p>
+        </div>
+      </Modal>
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        playerName="Guest"
+      />
     </div>
   )
 }
