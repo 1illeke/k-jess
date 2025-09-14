@@ -14,70 +14,70 @@ export const Piece = {
 	PAWN: 5,
 }
 
-// Import all piece images using Vite's asset system
-import topKing from '/pieces/top_king.png'
-import topQueen from '/pieces/top_queen.png'
-import topRook from '/pieces/top_rook.png'
-import topBishop from '/pieces/top_bishop.png'
-import topKnight from '/pieces/top_knight.png'
-import topPawn from '/pieces/top_pawn.png'
+// Import piece images using explicit imports with ?url suffix for Vite
+import topKingUrl from '/pieces/top_king.png?url'
+import topQueenUrl from '/pieces/top_queen.png?url'
+import topRookUrl from '/pieces/top_rook.png?url'
+import topBishopUrl from '/pieces/top_bishop.png?url'
+import topKnightUrl from '/pieces/top_knight.png?url'
+import topPawnUrl from '/pieces/top_pawn.png?url'
 
-import rightKing from '/pieces/right_king.png'
-import rightQueen from '/pieces/right_queen.png'
-import rightRook from '/pieces/right_rook.png'
-import rightBishop from '/pieces/right_bishop.png'
-import rightKnight from '/pieces/right_knight.png'
-import rightPawn from '/pieces/right_pawn.png'
+import rightKingUrl from '/pieces/right_king.png?url'
+import rightQueenUrl from '/pieces/right_queen.png?url'
+import rightRookUrl from '/pieces/right_rook.png?url'
+import rightBishopUrl from '/pieces/right_bishop.png?url'
+import rightKnightUrl from '/pieces/right_knight.png?url'
+import rightPawnUrl from '/pieces/right_pawn.png?url'
 
-import bottomKing from '/pieces/bottom_king.png'
-import bottomQueen from '/pieces/bottom_queen.png'
-import bottomRook from '/pieces/bottom_rook.png'
-import bottomBishop from '/pieces/bottom_bishop.png'
-import bottomKnight from '/pieces/bottom_knight.png'
-import bottomPawn from '/pieces/bottom_pawn.png'
+import bottomKingUrl from '/pieces/bottom_king.png?url'
+import bottomQueenUrl from '/pieces/bottom_queen.png?url'
+import bottomRookUrl from '/pieces/bottom_rook.png?url'
+import bottomBishopUrl from '/pieces/bottom_bishop.png?url'
+import bottomKnightUrl from '/pieces/bottom_knight.png?url'
+import bottomPawnUrl from '/pieces/bottom_pawn.png?url'
 
-import leftKing from '/pieces/left_king.png'
-import leftQueen from '/pieces/left_queen.png'
-import leftRook from '/pieces/left_rook.png'
-import leftBishop from '/pieces/left_bishop.png'
-import leftKnight from '/pieces/left_knight.png'
-import leftPawn from '/pieces/left_pawn.png'
+import leftKingUrl from '/pieces/left_king.png?url'
+import leftQueenUrl from '/pieces/left_queen.png?url'
+import leftRookUrl from '/pieces/left_rook.png?url'
+import leftBishopUrl from '/pieces/left_bishop.png?url'
+import leftKnightUrl from '/pieces/left_knight.png?url'
+import leftPawnUrl from '/pieces/left_pawn.png?url'
 
 export let filenames = []
 filenames[Orientation.TOP] = [
-	topKing,
-	topQueen,
-	topRook,
-	topBishop,
-	topKnight,
-	topPawn,
+	topKingUrl,
+	topQueenUrl,
+	topRookUrl,
+	topBishopUrl,
+	topKnightUrl,
+	topPawnUrl,
 ]
 
 filenames[Orientation.RIGHT] = [
-	rightKing,
-	rightQueen,
-	rightRook,
-	rightBishop,
-	rightKnight,
-	rightPawn,
+	rightKingUrl,
+	rightQueenUrl,
+	rightRookUrl,
+	rightBishopUrl,
+	rightKnightUrl,
+	rightPawnUrl,
 ]
 
 filenames[Orientation.BOTTOM] = [
-	bottomKing,
-	bottomQueen,
-	bottomRook,
-	bottomBishop,
-	bottomKnight,
-	bottomPawn,
+	bottomKingUrl,
+	bottomQueenUrl,
+	bottomRookUrl,
+	bottomBishopUrl,
+	bottomKnightUrl,
+	bottomPawnUrl,
 ]
 
 filenames[Orientation.LEFT] = [
-	leftKing,
-	leftQueen,
-	leftRook,
-	leftBishop,
-	leftKnight,
-	leftPawn,
+	leftKingUrl,
+	leftQueenUrl,
+	leftRookUrl,
+	leftBishopUrl,
+	leftKnightUrl,
+	leftPawnUrl,
 ]
 export function getSquare(orientation, [x, y], largeBoard) {
 	if (largeBoard) {
