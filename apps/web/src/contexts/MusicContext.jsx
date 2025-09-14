@@ -235,16 +235,16 @@ export function MusicProvider({ children }) {
         {
           id: 1,
           album: "K/Jess OST",
-          title: "Season 7 OST",
-          src: "/music/season-7-ost.mp3",
-          coverArt: "/kjess.png"
+          title: "Checkmate Symphony",
+          src: "/music/CheckmateSymphony.mp3",
+          coverArt: "/music/checkmate.jpeg"
         },
         {
           id: 2,
           album: "K/Jess OST",
-          title: "Battle Theme",
-          src: "/music/battle-theme.mp3",
-          coverArt: "/kj.svg"
+          title: "Castle me",
+          src: "/music/Castle_me.mp3",
+          coverArt: "/music/castle.jpeg"
         }
       ];
       
