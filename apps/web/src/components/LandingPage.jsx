@@ -202,6 +202,8 @@ function LandingPage() {
         <div className="wip-modal-content">
           <p>This is a Work In Progress project.</p>
           <p>Currently features may be broken or not added yet.</p>
+          <p>...</p>
+          <p>Only 2 player version is working for now.</p>
         </div>
       </Modal>
 
