@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Button, ThemeToggle } from './ui'
+import { Button, FeedbackModal } from './ui'
 import './AdminPage.css'
 
 function AdminPage() {
@@ -7,6 +7,7 @@ function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
 
   const fetchLobbies = async () => {
     try {
@@ -93,7 +94,15 @@ function AdminPage() {
 
   return (
     <div className="admin-page">
-      <ThemeToggle />
+      <Button
+        variant="secondary"
+        borderStyle="solid"
+        onClick={() => setShowFeedbackModal(true)}
+        className="feedback-btn"
+        style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}
+      >
+        [ Feedback ]
+      </Button>
       <div className="admin-container">
         <header className="admin-header">
           <h1 className="admin-title">Admin</h1>
@@ -254,6 +263,13 @@ function AdminPage() {
           )}
         </main>
       </div>
+      
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        playerName="Admin"
+      />
     </div>
   )
 }

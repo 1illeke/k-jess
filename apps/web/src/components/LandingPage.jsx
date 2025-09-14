@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Button, ThemeToggle, Modal } from './ui'
+import { Button, FeedbackModal, Modal } from './ui'
 import './LandingPage.css'
 import socket from '../sockets/socket'
 
@@ -8,6 +8,7 @@ function LandingPage() {
   const [selectedInfoSection, setSelectedInfoSection] = useState('General')
   const [isWipModalOpen, setIsWipModalOpen] = useState(false)
   const [onlineCount, setOnlineCount] = useState(0)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
 
   // Listen for online count updates
   useEffect(() => {
@@ -112,7 +113,15 @@ function LandingPage() {
 
   return (
     <div className="landing-page">
-      <ThemeToggle />
+      <Button
+        variant="secondary"
+        borderStyle="solid"
+        onClick={() => setShowFeedbackModal(true)}
+        className="feedback-btn"
+        style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}
+      >
+        [ Feedback ]
+      </Button>
       
       <div className="container">
         <header className="header">
@@ -179,6 +188,13 @@ function LandingPage() {
            <p>Currently features may be broken or not added yet.</p>
          </div>
        </Modal>
+       
+       {/* Feedback Modal */}
+       <FeedbackModal
+         isOpen={showFeedbackModal}
+         onClose={() => setShowFeedbackModal(false)}
+         playerName="Guest"
+       />
     </div>
   )
 }

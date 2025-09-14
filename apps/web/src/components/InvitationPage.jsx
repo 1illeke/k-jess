@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Button, ThemeToggle } from './ui'
+import { Button, FeedbackModal } from './ui'
 import './InvitationPage.css'
 
 function InvitationPage() {
   const { inviteCode } = useParams()
   const navigate = useNavigate()
   const [playerName, setPlayerName] = useState('')
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
 
   const handleJoinLobby = () => {
     if (!playerName.trim()) {
@@ -30,7 +31,15 @@ function InvitationPage() {
 
   return (
     <div className="invitation-page">
-      <ThemeToggle />
+      <Button
+        variant="secondary"
+        borderStyle="solid"
+        onClick={() => setShowFeedbackModal(true)}
+        className="feedback-btn"
+        style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}
+      >
+        [ Feedback ]
+      </Button>
       <div className="invitation-container">
         <header className="invitation-header">
           <h1 className="invitation-title">K/Jess</h1>
@@ -71,6 +80,13 @@ function InvitationPage() {
           </div>
         </main>
       </div>
+      
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        playerName={playerName || "Guest"}
+      />
     </div>
   )
 }

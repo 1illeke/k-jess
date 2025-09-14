@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { Button, ThemeToggle } from './ui'
+import { Button, FeedbackModal } from './ui'
 import './LobbyPage.css'
 import { lobbySocket, gameSocket } from '../sockets'
 import socket from '../sockets/socket'
@@ -18,6 +18,7 @@ function LobbyPage() {
   const [lobbyPlayers, setLobbyPlayers] = useState([])
   const [hostPlayerId, setHostPlayerId] = useState(null)
   const [currentPlayerId, setCurrentPlayerId] = useState(null)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const unsubscribeRef = useRef(null)
   const currentLobbyCodeRef = useRef(null)
 
@@ -272,7 +273,15 @@ function LobbyPage() {
 
   return (
     <div className="lobby-page">
-      <ThemeToggle />
+      <Button
+        variant="secondary"
+        borderStyle="solid"
+        onClick={() => setShowFeedbackModal(true)}
+        className="feedback-btn"
+        style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}
+      >
+        [ Feedback ]
+      </Button>
       <div className="lobby-container">
         {/* Header */}
         <header className="lobby-header">
@@ -389,6 +398,13 @@ function LobbyPage() {
           </section>
         )}
       </div>
+      
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        playerName={playerName}
+      />
     </div>
   )
 }

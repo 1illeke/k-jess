@@ -235,7 +235,9 @@
   justify-content: center;
   padding: 10px;
   min-height: 0;
+  transition: box-shadow 0.3s ease;
 }
+
 
 .placeholder-board {
   display: flex;
@@ -408,6 +410,14 @@
   gap: 20px;
   justify-content: center;
 }
+
+/* Game over info */
+.game-over-info {
+  margin: 15px 0;
+  color: var(--secondary-text);
+  font-style: italic;
+}
+
 
 .pause-btn {
   min-width: 120px;

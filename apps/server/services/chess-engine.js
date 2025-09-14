@@ -175,8 +175,19 @@ export class ChessEngine {
       return { valid: false, reason: 'Cannot capture your own piece' }
     }
 
-    // For now, allow any move to an empty square or enemy piece
-    // TODO: Add proper chess move validation later
+    // Check if the move is within the piece's valid moves
+    const validMoves = this.getValidMovesForPiece(piece)
+    if (!validMoves.includes(toSquare)) {
+      console.log('Validation failed: Move not in piece\'s valid moves');
+      return { valid: false, reason: 'Invalid move for this piece' }
+    }
+
+    // Check if the move would leave the king in check
+    if (this.wouldLeaveKingInCheck(fromSquare, toSquare, playerOrientation)) {
+      console.log('Validation failed: Move would leave king in check');
+      return { valid: false, reason: 'Move would leave king in check' }
+    }
+
     console.log('Validation passed!');
     return { valid: true }
   }
@@ -184,14 +195,17 @@ export class ChessEngine {
   // Get all valid moves for a piece
   getValidMovesForPiece(piece) {
     const moves = []
-    const [x, y] = this.getSquarePosition(piece.square)
+    const [x, y] = this.getSquarePosition(piece.square, Orientation.BOTTOM)
+    
+    // Debug: Removed excessive logging for performance
     
     const addMoveIfValid = (targetX, targetY, canCapture = true, canMoveToEmpty = true) => {
       if (targetX < 0 || targetX >= this.boardSize || targetY < 0 || targetY >= this.boardSize) {
+        // Move out of bounds
         return false
       }
       
-      const targetSquare = this.getSquare(piece.team, [targetX, targetY])
+      const targetSquare = this.getSquare(Orientation.BOTTOM, [targetX, targetY])
       const targetPiece = this.getPieceAt(targetSquare)
       
       if (targetPiece) {
@@ -207,7 +221,7 @@ export class ChessEngine {
     }
 
     switch (piece.type) {
-      case Piece.PAWN:
+      case Piece.PAWN: {
         // Pawn moves (assuming bottom orientation moves up)
         const direction = piece.team === Orientation.BOTTOM ? -1 : 1
         addMoveIfValid(x, y + direction, false, true)
@@ -218,6 +232,7 @@ export class ChessEngine {
         addMoveIfValid(x - 1, y + direction, true, false)
         addMoveIfValid(x + 1, y + direction, true, false)
         break
+      }
 
       case Piece.ROOK:
         // Horizontal and vertical moves
@@ -265,6 +280,7 @@ export class ChessEngine {
         break
     }
 
+    // Debug: Generated moves for piece
     return moves
   }
 
@@ -330,7 +346,7 @@ export class ChessEngine {
 
     // Check for pawn promotion
     if (piece.type === Piece.PAWN) {
-      const [x, y] = this.getSquarePosition(toSquare)
+      const [, y] = this.getSquarePosition(toSquare)
       if (y <= this.boardSize - 8) {
         piece.type = Piece.QUEEN
         // Update cooldown for promoted piece
@@ -340,20 +356,408 @@ export class ChessEngine {
 
     this.moveHistory.push(move)
 
+    // Get updated game status after the move
+    const gameStatus = this.getGameStatus()
+    
+    // Update engine game state if game is over
+    if (gameStatus.gameOver) {
+      this.gameState = 'ended'
+    }
+
     return { 
       success: true, 
       move,
-      gameState: this.getGameState()
+      gameState: this.getGameState(),
+      gameStatus: gameStatus
     }
+  }
+
+  // Find king of a specific team
+  findKing(team) {
+    return this.pieces.find(piece => 
+      !piece.dead && 
+      piece.type === Piece.KING && 
+      piece.team === team
+    )
+  }
+
+  // Get attack squares for a piece (without legal move restrictions)
+  getAttackSquaresForPiece(piece) {
+    const attacks = []
+    const [x, y] = this.getSquarePosition(piece.square, Orientation.BOTTOM)
+    
+    const addAttackIfValid = (targetX, targetY) => {
+      if (targetX < 0 || targetX >= this.boardSize || targetY < 0 || targetY >= this.boardSize) {
+        return false
+      }
+      
+      const targetSquare = this.getSquare(Orientation.BOTTOM, [targetX, targetY])
+      attacks.push(targetSquare)
+      
+      const targetPiece = this.getPieceAt(targetSquare)
+      return !targetPiece // Can continue if no piece blocking
+    }
+
+    switch (piece.type) {
+      case Piece.PAWN: {
+        // Pawns only attack diagonally
+        const direction = piece.team === Orientation.BOTTOM ? -1 : 1
+        addAttackIfValid(x - 1, y + direction)
+        addAttackIfValid(x + 1, y + direction)
+        break
+      }
+
+      case Piece.ROOK:
+        // Horizontal and vertical attacks
+        for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
+          let range = 1
+          while (addAttackIfValid(x + dx * range, y + dy * range)) {
+            range++
+          }
+        }
+        break
+
+      case Piece.BISHOP:
+        // Diagonal attacks
+        for (const [dx, dy] of [[-1, 1], [1, -1], [-1, -1], [1, 1]]) {
+          let range = 1
+          while (addAttackIfValid(x + dx * range, y + dy * range)) {
+            range++
+          }
+        }
+        break
+
+      case Piece.QUEEN:
+        // All directions
+        for (const [dx, dy] of [[-1, 1], [1, -1], [-1, -1], [1, 1], [0, 1], [1, 0], [0, -1], [-1, 0]]) {
+          let range = 1
+          while (addAttackIfValid(x + dx * range, y + dy * range)) {
+            range++
+          }
+        }
+        break
+
+      case Piece.KING:
+        // One square in all directions
+        for (const [dx, dy] of [[-1, 1], [1, -1], [-1, -1], [1, 1], [0, 1], [1, 0], [0, -1], [-1, 0]]) {
+          addAttackIfValid(x + dx, y + dy)
+        }
+        break
+
+      case Piece.KNIGHT:
+        // L-shaped attacks
+        for (const [dx, dy] of [[1, 2], [1, -2], [2, 1], [2, -1]]) {
+          addAttackIfValid(x + dx, y + dy)
+          addAttackIfValid(x - dx, y - dy)
+        }
+        break
+    }
+
+    return attacks
+  }
+
+  // Get all attackers of a specific square
+  getAttackersOfSquare(square, byTeams = null, ignoreCooldown = false) {
+    const attackers = []
+    
+    // If no teams specified, check all enemy teams
+    if (!byTeams) {
+      byTeams = this.getEnemyTeams(-1) // Get all active teams
+    }
+    
+    for (const team of byTeams) {
+      const teamPieces = this.pieces.filter(piece => 
+        !piece.dead && 
+        piece.team === team
+      )
+
+      for (const piece of teamPieces) {
+        const attacks = this.getAttackSquaresForPiece(piece)
+        if (attacks.includes(square)) {
+          const isOnCooldown = piece.cooldown && piece.cooldown > Date.now()
+          
+          // Skip cooldown pieces unless explicitly including them
+          if (!ignoreCooldown && isOnCooldown) {
+            continue
+          }
+          
+          attackers.push({
+            piece: piece,
+            isOnCooldown: isOnCooldown,
+            cooldownExpiry: piece.cooldown || 0,
+            attackingSquare: square
+          })
+        }
+      }
+    }
+    
+    return attackers
+  }
+
+  // Removed: isSquareUnderAttack - use getAttackersOfSquare instead
+
+  // Check if a team's king is in check
+  isInCheck(team, treatCooldownAsActive = false) {
+    const king = this.findKing(team)
+    if (!king) {
+      return { 
+        inCheck: false, 
+        activeAttackers: [], 
+        cooldownAttackers: [],
+        kingSquare: null
+      }
+    }
+
+    const enemyTeams = this.getEnemyTeams(team)
+    
+    // Get all attackers (including those on cooldown)
+    const allAttackers = this.getAttackersOfSquare(king.square, enemyTeams, true)
+    
+    // Split attackers into active and cooldown groups
+    const activeAttackers = allAttackers.filter(attacker => !attacker.isOnCooldown)
+    const cooldownAttackers = allAttackers.filter(attacker => attacker.isOnCooldown)
+    
+    // Determine if in check based on treatCooldownAsActive flag
+    const inCheck = treatCooldownAsActive
+      ? allAttackers.length > 0
+      : activeAttackers.length > 0
+    
+    return {
+      inCheck,
+      activeAttackers: activeAttackers,
+      cooldownAttackers: cooldownAttackers,
+      kingSquare: king.square,
+      // Legacy compatibility
+      attackingPiece: activeAttackers.length > 0 ? activeAttackers[0].piece : null
+    }
+  }
+
+  // Get enemy teams for a given team (supports 2-4 players)
+  getEnemyTeams(team) {
+    // Only check teams that actually have pieces in the game
+    const activePieces = this.pieces.filter(p => !p.dead)
+    const activeTeams = [...new Set(activePieces.map(p => p.team))]
+    return activeTeams.filter(t => t !== team)
+  }
+
+  // Check if a move would leave the king in check (invalid move)
+  wouldLeaveKingInCheck(fromSquare, toSquare, team, countCooldown = false) {
+    // Make a temporary move to test
+    const piece = this.getPieceAt(fromSquare)
+    const capturedPiece = this.getPieceAt(toSquare)
+    
+    if (!piece || piece.team !== team) return true
+    
+    // Temporarily execute the move
+    const originalSquare = piece.square
+    piece.square = toSquare
+    
+    if (capturedPiece) {
+      capturedPiece.dead = true
+    }
+    
+    // Check if king would be in check after this move
+    // Pass the countCooldown flag to treat cooldown attackers as active threats
+    const checkResult = this.isInCheck(team, countCooldown)
+    
+    // Restore the board state
+    piece.square = originalSquare
+    if (capturedPiece) {
+      capturedPiece.dead = false
+    }
+    
+    return checkResult.inCheck
+  }
+
+  // Get all legal moves for a piece (excluding moves that leave king in check)
+  getLegalMovesForPiece(piece, { countCooldown = false } = {}) {
+    const possibleMoves = this.getValidMovesForPiece(piece)
+    const legalMoves = []
+    
+    for (const move of possibleMoves) {
+      if (!this.wouldLeaveKingInCheck(piece.square, move, piece.team, countCooldown)) {
+        legalMoves.push(move)
+      }
+    }
+    
+    return legalMoves
+  }
+
+  // Check if a team is in checkmate
+  isInCheckmate(team) {
+    // Check with cooldown attackers treated as active threats
+    const checkResult = this.isInCheck(team, true)
+    
+    // Must be threatened by someone (active or cooldown)
+    const allAttackers = [...checkResult.activeAttackers, ...checkResult.cooldownAttackers]
+    if (allAttackers.length === 0) {
+      return { inCheckmate: false }
+    }
+    
+    // Search for ANY escape with cooldown counted as active threats
+    const teamPieces = this.pieces.filter(piece => 
+      !piece.dead && 
+      piece.team === team
+    )
+    
+    for (const piece of teamPieces) {
+      // Use cooldown-aware legality checking for mate search
+      if (this.getLegalMovesForPiece(piece, { countCooldown: true }).length > 0) {
+        return { 
+          inCheckmate: false,
+          reason: 'has_legal_moves',
+          allAttackers: allAttackers
+        }
+      }
+    }
+    
+    // No legal moves available - this is checkmate
+    return {
+      inCheckmate: true,
+      allAttackers: allAttackers,
+      kingSquare: checkResult.kingSquare,
+      // Legacy compatibility fields
+      activeAttackers: checkResult.activeAttackers,
+      cooldownAttackers: checkResult.cooldownAttackers
+    }
+  }
+
+  // Check if a team is in stalemate (no legal moves but not in check)
+  isInStalemate(team) {
+    const checkResult = this.isInCheck(team)
+    
+    // Must NOT be in check to be stalemate
+    if (checkResult.inCheck) {
+      return { inStalemate: false }
+    }
+    
+    // Check if any piece of this team can make a legal move
+    const teamPieces = this.pieces.filter(piece => 
+      !piece.dead && 
+      piece.team === team
+    )
+    
+    for (const piece of teamPieces) {
+      const legalMoves = this.getLegalMovesForPiece(piece)
+      if (legalMoves.length > 0) {
+        return { inStalemate: false }
+      }
+    }
+    
+    return { inStalemate: true }
+  }
+
+  // Check for insufficient material to continue
+  hasInsufficientMaterial() {
+    const activePieces = this.pieces.filter(p => !p.dead)
+    
+    // Count pieces by team
+    const teamCounts = {}
+    const teamPieces = {}
+    
+    for (const piece of activePieces) {
+      if (!teamCounts[piece.team]) {
+        teamCounts[piece.team] = 0
+        teamPieces[piece.team] = []
+      }
+      teamCounts[piece.team]++
+      teamPieces[piece.team].push(piece.type)
+    }
+    
+    const teams = Object.keys(teamCounts).map(Number)
+    
+    // If only one team left, game is over
+    if (teams.length <= 1) {
+      return { insufficient: true, reason: 'only_one_team_remaining' }
+    }
+    
+    // Check for insufficient material patterns
+    for (const team of teams) {
+      const pieces = teamPieces[team]
+      const count = teamCounts[team]
+      
+      // King vs King
+      if (count === 1 && pieces.includes(Piece.KING)) {
+        continue
+      }
+      
+      // King + Bishop vs King or King + Knight vs King
+      if (count === 2 && pieces.includes(Piece.KING) && 
+          (pieces.includes(Piece.BISHOP) || pieces.includes(Piece.KNIGHT))) {
+        continue
+      }
+      
+      // If any team has sufficient material, continue the game
+      return { insufficient: false }
+    }
+    
+    return { insufficient: true, reason: 'insufficient_material' }
+  }
+
+  // Get comprehensive game status
+  getGameStatus() {
+    const status = {
+      gameState: this.gameState,
+      inCheck: {},
+      inCheckmate: {},
+      inStalemate: {},
+      winner: null,
+      loser: null,
+      gameOver: false,
+      gameOverReason: null
+    }
+    
+    // Check insufficient material first
+    const materialCheck = this.hasInsufficientMaterial()
+    if (materialCheck.insufficient) {
+      status.gameOver = true
+      status.gameOverReason = materialCheck.reason
+      return status
+    }
+    
+    // Check each team's status
+    const teams = this.getEnemyTeams(-1) // Get all teams with kings
+    teams.push(Orientation.TOP, Orientation.BOTTOM) // Ensure we check main teams
+    const uniqueTeams = [...new Set(teams.filter(team => this.findKing(team)))]
+    
+    for (const team of uniqueTeams) {
+      status.inCheck[team] = this.isInCheck(team)
+      status.inCheckmate[team] = this.isInCheckmate(team)
+      status.inStalemate[team] = this.isInStalemate(team)
+      
+      // If a team is checkmated, game is over
+      if (status.inCheckmate[team].inCheckmate) {
+        status.gameOver = true
+        status.gameOverReason = 'checkmate'
+        // Winner is the remaining team(s)
+        status.winner = uniqueTeams.filter(t => t !== team)
+        status.loser = team
+        break
+      }
+      
+      // Pending checkmate logic removed - checkmate now triggers immediately
+      
+      // If a team is stalemated, it's a draw
+      if (status.inStalemate[team].inStalemate) {
+        status.gameOver = true
+        status.gameOverReason = 'stalemate'
+        break
+      }
+    }
+    
+    return status
   }
 
   // Get current game state
   getGameState() {
+    const gameStatus = this.getGameStatus()
+    
     return {
       pieces: this.pieces.filter(p => !p.dead),
       gameState: this.gameState,
       moveHistory: this.moveHistory,
-      boardSize: this.boardSize
+      boardSize: this.boardSize,
+      status: gameStatus
     }
   }
 
@@ -362,7 +766,7 @@ export class ChessEngine {
     const baseState = this.getGameState()
     
     // For now, just return the pieces as they are
-    // TODO: Add proper mirroring later if needed
+    // Note: Mirroring will be implemented when needed for multi-player support
     return {
       ...baseState,
       pieces: baseState.pieces,

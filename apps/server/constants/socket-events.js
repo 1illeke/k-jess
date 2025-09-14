@@ -44,6 +44,12 @@ export const GAME_EVENTS = {
   MOVE_MADE: 'game:moveMade',
   GAME_STATE: 'game:gameState',
   
+  // Game status events
+  CHECK: 'game:check',
+  CHECKMATE: 'game:checkmate',
+  STALEMATE: 'game:stalemate',
+  GAME_OVER: 'game:gameOver',
+  
   // Navigation
   NAVIGATE_AWAY: 'game:navigateAway'
 };

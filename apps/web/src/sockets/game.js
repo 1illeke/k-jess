@@ -74,13 +74,29 @@ export function makeMove({ code, from, to, playerOrientation }, { onMoveMade, on
 }
 
 // Listeners
-export function listenGame({ onStarted, onPaused, onResumed, onEnded, onMoveMade, onGameState } = {}) {
+export function listenGame({ 
+  onStarted, 
+  onPaused, 
+  onResumed, 
+  onEnded, 
+  onMoveMade, 
+  onGameState,
+  onCheck,
+  onCheckmate,
+  onStalemate,
+  onGameOver
+} = {}) {
   if (onStarted) socket.on(GAME_EVENTS.STARTED, onStarted)
   if (onPaused) socket.on(GAME_EVENTS.PAUSED, onPaused)
   if (onResumed) socket.on(GAME_EVENTS.RESUMED, onResumed)
   if (onEnded) socket.on(GAME_EVENTS.ENDED, onEnded)
   if (onMoveMade) socket.on(GAME_EVENTS.MOVE_MADE, onMoveMade)
   if (onGameState) socket.on(GAME_EVENTS.GAME_STATE, onGameState)
+  if (onCheck) socket.on(GAME_EVENTS.CHECK, onCheck)
+  if (onCheckmate) socket.on(GAME_EVENTS.CHECKMATE, onCheckmate)
+  if (onStalemate) socket.on(GAME_EVENTS.STALEMATE, onStalemate)
+  if (onGameOver) socket.on(GAME_EVENTS.GAME_OVER, onGameOver)
+  
   return () => {
     if (onStarted) socket.off(GAME_EVENTS.STARTED, onStarted)
     if (onPaused) socket.off(GAME_EVENTS.PAUSED, onPaused)
@@ -88,6 +104,10 @@ export function listenGame({ onStarted, onPaused, onResumed, onEnded, onMoveMade
     if (onEnded) socket.off(GAME_EVENTS.ENDED, onEnded)
     if (onMoveMade) socket.off(GAME_EVENTS.MOVE_MADE, onMoveMade)
     if (onGameState) socket.off(GAME_EVENTS.GAME_STATE, onGameState)
+    if (onCheck) socket.off(GAME_EVENTS.CHECK, onCheck)
+    if (onCheckmate) socket.off(GAME_EVENTS.CHECKMATE, onCheckmate)
+    if (onStalemate) socket.off(GAME_EVENTS.STALEMATE, onStalemate)
+    if (onGameOver) socket.off(GAME_EVENTS.GAME_OVER, onGameOver)
   }
 }
 

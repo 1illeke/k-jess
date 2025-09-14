@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useParams, useNavigate } from 'react-router-dom'
-import { Button, ThemeToggle, TwoPlayerBoard, ThreePlayerBoard, FourPlayerBoard } from './ui'
+import { Button, FeedbackModal, TwoPlayerBoard, ThreePlayerBoard, FourPlayerBoard } from './ui'
 import './GamePage.css'
 import { gameSocket, chatSocket, timerSocket } from '../sockets'
 import socket from '../sockets/socket.js'
@@ -22,6 +22,8 @@ function GamePage() {
   const [modalType, setModalType] = useState('')
   const [pausedBy, setPausedBy] = useState('')
   const [countdown, setCountdown] = useState(null)
+  const [gameOverData, setGameOverData] = useState(null)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [chatMessages, setChatMessages] = useState(() => [])
   const [newMessage, setNewMessage] = useState('')
   const [gamePlayers, setGamePlayers] = useState(() => {
@@ -246,6 +248,17 @@ function GamePage() {
     setModalType('')
   }
 
+
+  const handleGameOver = (gameOverInfo) => {
+    setGameOverData(gameOverInfo)
+    setModalType('game_over')
+    setShowModal(true)
+  }
+
+  const handleBackHome = () => {
+    navigate('/')
+  }
+
   const handleSendMessage = (e) => {
     e.preventDefault()
     if (newMessage.trim()) {
@@ -284,6 +297,7 @@ function GamePage() {
           gameCode={gameId}
           playerOrientation={getPlayerOrientation()}
           boardSize={gameSettings.boardSize || 8}
+          onGameOver={handleGameOver}
         />
       case '1v1v1':
         return <ThreePlayerBoard />
@@ -294,6 +308,7 @@ function GamePage() {
           gameCode={gameId}
           playerOrientation={getPlayerOrientation()}
           boardSize={gameSettings.boardSize || 8}
+          onGameOver={handleGameOver}
         />
     }
   }
@@ -314,7 +329,6 @@ function GamePage() {
 
   return (
     <div className="game-page">
-      <ThemeToggle />
       <div className="game-container">
         {/* Left Column - Players and Chat */}
         <aside className="players-chat-section">
@@ -392,40 +406,106 @@ function GamePage() {
             >
               [ Quit ]
             </Button>
+            <Button
+              variant="secondary"
+              borderStyle="solid"
+              onClick={() => setShowFeedbackModal(true)}
+              className="control-btn"
+            >
+              [ Feedback ]
+            </Button>
           </div>
         </aside>
       </div>
-      {/* Game Modal - Only for Pause and Quit */}
+      {/* Game Modal - For Pause, Quit, and Game Over */}
       {showModal && modalType !== 'countdown' && (
         <div className="pause-overlay">
           <div className="pause-modal-content">
             <h2 className="pause-title">
-              {modalType === 'pause' 
-                ? `${pausedBy} paused the game`
-                : 'Do you want to quit?'
-              }
+              {modalType === 'pause' && `${pausedBy} paused the game`}
+              {modalType === 'quit' && 'Do you want to quit?'}
+              {modalType === 'game_over' && (
+                gameOverData?.winner === true ? 'You Won!' :
+                gameOverData?.winner === false ? 'Draw!' : 'You Lost!'
+              )}
             </h2>
+            
+            {modalType === 'game_over' && (
+              <div className="game-over-info">
+                <p>
+                  {gameOverData?.reason === 'checkmate' && 'by Checkmate'}
+                  {gameOverData?.reason === 'stalemate' && 'by Stalemate'}
+                  {gameOverData?.reason === 'insufficient_material' && 'by Insufficient Material'}
+                  {gameOverData?.reason === 'only_one_team_remaining' && 'Last Player Standing'}
+                </p>
+              </div>
+            )}
+            
+            
             <div className="pause-buttons">
-              <Button
-                variant="primary"
-                borderStyle="solid"
-                onClick={modalType === 'pause' ? handleResume : handleCloseModal}
-                className="pause-btn"
-              >
-                [ Resume ]
-              </Button>
-              <Button
-                variant="secondary"
-                borderStyle="solid"
-                onClick={modalType === 'pause' ? handleQuit : handleConfirmQuit}
-                className="pause-btn"
-              >
-                [ Quit ]
-              </Button>
+              {modalType === 'pause' && (
+                <>
+                  <Button
+                    variant="primary"
+                    borderStyle="solid"
+                    onClick={handleResume}
+                    className="pause-btn"
+                  >
+                    [ Resume ]
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    borderStyle="solid"
+                    onClick={handleQuit}
+                    className="pause-btn"
+                  >
+                    [ Quit ]
+                  </Button>
+                </>
+              )}
+              
+              {modalType === 'quit' && (
+                <>
+                  <Button
+                    variant="primary"
+                    borderStyle="solid"
+                    onClick={handleCloseModal}
+                    className="pause-btn"
+                  >
+                    [ Cancel ]
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    borderStyle="solid"
+                    onClick={handleConfirmQuit}
+                    className="pause-btn"
+                  >
+                    [ Quit ]
+                  </Button>
+                </>
+              )}
+              
+              {modalType === 'game_over' && (
+                <Button
+                  variant="primary"
+                  borderStyle="solid"
+                  onClick={handleBackHome}
+                  className="pause-btn"
+                >
+                  [ Back Home ]
+                </Button>
+              )}
             </div>
           </div>
         </div>
       )}
+      
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        playerName={playerName}
+      />
     </div>
   )
 }

@@ -594,10 +594,57 @@ io.on('connection', (socket) => {
         }
       }
 
+      // Handle game status events
+      if (result.gameStatus) {
+        const status = result.gameStatus;
+        
+        // Emit check events
+        for (const [team, checkResult] of Object.entries(status.inCheck)) {
+          if (checkResult.inCheck) {
+            io.to(`game:${code}`).emit(GAME_EVENTS.CHECK, {
+              team: parseInt(team),
+              attackingPiece: checkResult.attackingPiece,
+              kingSquare: checkResult.kingSquare
+            });
+          }
+        }
+        
+        // Emit checkmate events
+        for (const [team, checkmateResult] of Object.entries(status.inCheckmate)) {
+          if (checkmateResult.inCheckmate) {
+            io.to(`game:${code}`).emit(GAME_EVENTS.CHECKMATE, {
+              team: parseInt(team),
+              allAttackers: checkmateResult.allAttackers,
+              kingSquare: checkmateResult.kingSquare,
+              winner: status.winner,
+              loser: status.loser
+            });
+          }
+        }
+        
+        // Emit stalemate events
+        for (const [team, stalemateResult] of Object.entries(status.inStalemate)) {
+          if (stalemateResult.inStalemate) {
+            io.to(`game:${code}`).emit(GAME_EVENTS.STALEMATE, {
+              team: parseInt(team)
+            });
+          }
+        }
+        
+        // Emit game over event
+        if (status.gameOver) {
+          io.to(`game:${code}`).emit(GAME_EVENTS.GAME_OVER, {
+            reason: status.gameOverReason,
+            winner: status.winner
+          });
+        }
+      }
+
       // Broadcast the move to all players
       io.to(`game:${code}`).emit(GAME_EVENTS.MOVE_MADE, {
         move: result.move,
-        gameState: result.gameState
+        gameState: result.gameState,
+        gameStatus: result.gameStatus
       });
 
       if (ack) ack({ success: true, move: result.move });

@@ -1,8 +1,7 @@
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import './2player.css'
 import * as chess from '../../../chess.js'
 import { makeMove, listenGame } from '../../../sockets/game.js'
-import { GAME_EVENTS } from '../../../../constants/socket-events.js'
 
 
 const DURATION = 3000.0
@@ -14,7 +13,9 @@ export default function TwoPlayerBoard({
 	boardSize = 8,
 	orientation/* or team or whatever */= chess.Orientation.BOTTOM,
 	gameCode = null,
-	playerOrientation = chess.Orientation.BOTTOM
+	playerOrientation = chess.Orientation.BOTTOM,
+	onGameOver = null,
+	onCheck = null
 }) {
 	const largeBoard = boardSize === 14
 	const squareWidth = 1.0/boardSize*100
@@ -40,7 +41,6 @@ export default function TwoPlayerBoard({
 	}
 
 	const [pieces, setPieces] = useState([])
-	const [gameState, setGameState] = useState(null)
 
 	const piece_lookup = {}
 	for (const piece of pieces) {
@@ -209,12 +209,53 @@ export default function TwoPlayerBoard({
 
 		const cleanup = listenGame({
 			onGameState: (state) => {
-				setGameState(state)
 				setPieces(state.pieces || [])
 			},
 			onMoveMade: (data) => {
 				// Handle move animation or updates
 				console.log('Move made:', data)
+			},
+			onCheckmate: (data) => {
+				console.log('Checkmate detected:', data)
+				
+				// Pass game over data to parent component
+				if (onGameOver) {
+					const isPlayerWin = data.loser !== playerOrientation
+					onGameOver({
+						type: 'checkmate',
+						winner: isPlayerWin,
+						reason: 'checkmate'
+					})
+				}
+			},
+			onStalemate: (data) => {
+				console.log('Stalemate detected:', data)
+				
+				if (onGameOver) {
+					onGameOver({
+						type: 'stalemate',
+						winner: false, // Draw
+						reason: 'stalemate'
+					})
+				}
+			},
+			onGameOver: (data) => {
+				console.log('Game over:', data)
+				
+				if (onGameOver) {
+					let winner = false // Draw by default
+					if (data.reason === 'checkmate') {
+						winner = data.loser !== playerOrientation
+					} else if (data.reason === 'only_one_team_remaining') {
+						winner = data.winner && data.winner.includes(playerOrientation)
+					}
+					
+					onGameOver({
+						type: 'game_over',
+						winner: winner,
+						reason: data.reason
+					})
+				}
 			}
 		})
 
@@ -282,7 +323,7 @@ export default function TwoPlayerBoard({
 				const canClick = myPiece && !isOnCooldown
 				let [x, y] = piece.position || square_lookup[piece.square]
 				
-				// Calculate cooldown percentage for visual feedback
+				// Calculate cooldown percentage for visual feedback (show for ALL pieces)
 				let cooldownPercent = 0
 				if (isOnCooldown && myPiece) {
 					const cooldownTimes = {
@@ -325,7 +366,7 @@ export default function TwoPlayerBoard({
 									left: 0,
 									width: '100%',
 									height: '100%',
-									background: `conic-gradient(from 0deg, rgba(255,0,0,0.3) ${cooldownPercent}%, transparent ${cooldownPercent}%)`,
+									background: `conic-gradient(from 0deg, ${myPiece ? 'rgba(255,0,0,0.4)' : 'rgba(255,165,0,0.3)'} ${cooldownPercent}%, transparent ${cooldownPercent}%)`,
 									pointerEvents: 'none',
 									borderRadius: '50%'
 								}}

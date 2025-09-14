@@ -74,3 +74,5 @@
 	aspect-ratio: 1;
 	position: absolute;
 }
+
+/* Game status messages removed - using red glow on chess-section instead */
