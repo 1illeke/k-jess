@@ -89,9 +89,8 @@ const FeedbackModal = ({ isOpen, onClose, playerName }) => {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
+    <Modal isOpen={isOpen} onClose={handleClose} title="Leave Feedback">
       <div className="feedback-modal">
-        <h2 className="feedback-title">Leave Feedback</h2>
         
         {isSubmitted ? (
           <div className="feedback-success">
