@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './2player.css'
 import * as chess from '../../../chess.js'
 import { makeMove, listenGame } from '../../../sockets/game.js'
+import { useSound } from '../../../contexts/SoundContext'
 
 
 const DURATION = 3000.0
@@ -17,6 +18,7 @@ export default function TwoPlayerBoard({
 	onGameOver = null,
 	onCheck = null
 }) {
+	const { actions: soundActions } = useSound()
 	const largeBoard = boardSize === 14
 	const squareWidth = 1.0 / boardSize * 100
 
@@ -214,6 +216,8 @@ export default function TwoPlayerBoard({
 			onMoveMade: (data) => {
 				// Handle move animation or updates
 				console.log('Move made:', data)
+				// Play sound for remote moves
+				soundActions.playMoveSound()
 			},
 			onCheckmate: (data) => {
 				console.log('Checkmate detected:', data)
@@ -409,6 +413,8 @@ export default function TwoPlayerBoard({
 					}, {
 						onMoveMade: (response) => {
 							console.log('Move successful:', response)
+							// Play sound for successful move
+							soundActions.playMoveSound()
 						},
 						onError: (error) => {
 							console.error('Move failed:', error)
@@ -432,6 +438,8 @@ export default function TwoPlayerBoard({
 						}
 						return prev
 					})
+					// Play sound for local move
+					soundActions.playMoveSound()
 				}
 			}
 			return <div

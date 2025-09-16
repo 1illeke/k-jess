@@ -5,6 +5,7 @@ import './GamePage.css'
 import { gameSocket, chatSocket, timerSocket } from '../sockets'
 import socket from '../sockets/socket.js'
 import { LOBBY_EVENTS } from '../../constants/socket-events.js'
+import { useSound } from '../contexts/SoundContext'
 
 function GamePage() {
   const location = useLocation()
@@ -14,6 +15,7 @@ function GamePage() {
   const playerName = location.state?.playerName || localStorage.getItem('playerName') || 'Player1'
   const lobbyPublic = location.state?.lobbyPublic || location.state?.lobbyPlayers || []
   const gameSettings = location.state?.gameSettings || {}
+  const { isMuted, actions: soundActions } = useSound()
 
 
   const [gameTime, setGameTime] = useState(0)
@@ -83,7 +85,7 @@ function GamePage() {
     }
 
     socket.on(LOBBY_EVENTS.STARTED, handleLobbyStarted);
-    
+
     return () => {
       socket.off(LOBBY_EVENTS.STARTED, handleLobbyStarted);
     }
@@ -130,33 +132,33 @@ function GamePage() {
 
   useEffect(() => {
     if (gameId) {
-      socket.emit(LOBBY_EVENTS.JOIN, { 
-        code: gameId, 
-        playerId: getPlayerId(), 
-        name: playerName 
+      socket.emit(LOBBY_EVENTS.JOIN, {
+        code: gameId,
+        playerId: getPlayerId(),
+        name: playerName
       }, (response) => {
         if (!response?.success) {
           console.error('Failed to join lobby:', response?.error);
           // Navigate back to home if lobby doesn't exist
-          navigate('/', { 
-            state: { 
+          navigate('/', {
+            state: {
               error: 'Lobby not found or expired',
-              playerName 
-            } 
+              playerName
+            }
           });
         }
       });
-      
+
       gameSocket.joinGame({ code: gameId }, {
-        onJoined: () => {},
+        onJoined: () => { },
         onError: (err) => {
           console.error('Failed to join game:', err);
           // Navigate back to home if game doesn't exist
-          navigate('/', { 
-            state: { 
+          navigate('/', {
+            state: {
               error: 'Game not found or expired',
-              playerName 
-            } 
+              playerName
+            }
           });
         }
       });
@@ -171,7 +173,7 @@ function GamePage() {
           }));
           setGamePlayers(players);
         }
-        
+
         // Check if lobby is already in game phase and start countdown if needed
         if (lobbyPublic?.phase === 'in_game' && countdown === null && !isPaused) {
           setCountdown(3);
@@ -205,12 +207,12 @@ function GamePage() {
 
   const handlePause = () => {
     if (!isPaused) {
-      gameSocket.pauseGame({ code: gameId || 'default', playerName }, { onPaused: () => {} })
+      gameSocket.pauseGame({ code: gameId || 'default', playerName }, { onPaused: () => { } })
     }
   }
 
   const handleResume = () => {
-    gameSocket.resumeGame({ code: gameId || 'default', playerName }, { onResumed: () => {} })
+    gameSocket.resumeGame({ code: gameId || 'default', playerName }, { onResumed: () => { } })
   }
 
   const handleQuit = () => {
@@ -222,16 +224,16 @@ function GamePage() {
     gameSocket.quitGame(
       { code: gameId || 'default', playerName },
       {
-        onEnded: () => {},
+        onEnded: () => { },
         onNavigate: () => {
           setTimeout(() => {
             if (gameId) {
               // Navigate to the lobby page for this game
-              navigate(`/lobby/${gameId}`, { 
-                state: { 
+              navigate(`/lobby/${gameId}`, {
+                state: {
                   playerName,
-                  inviteCode: gameId 
-                } 
+                  inviteCode: gameId
+                }
               });
             } else {
               // Fallback to home if no gameId
@@ -262,11 +264,11 @@ function GamePage() {
   const handleSendMessage = (e) => {
     e.preventDefault()
     if (newMessage.trim()) {
-      chatSocket.sendMessage({ 
-        code: gameId || 'default', 
+      chatSocket.sendMessage({
+        code: gameId || 'default',
         playerId: getPlayerId(),
-        playerName, 
-        text: newMessage.trim() 
+        playerName,
+        text: newMessage.trim()
       })
       setNewMessage('')
     }
@@ -276,24 +278,24 @@ function GamePage() {
   const getPlayerOrientation = () => {
     const playerId = getPlayerId()
     const playerIndex = gamePlayers.findIndex(p => p.id === playerId)
-    
+
     // For 2-player games: first player is BOTTOM, second is TOP
     if (gamePlayers.length === 2) {
       return playerIndex === 0 ? 2 : 0 // BOTTOM : TOP
     }
-    
+
     // For 4-player games: assign orientations in order
     if (gamePlayers.length === 4) {
       return playerIndex // 0: TOP, 1: RIGHT, 2: BOTTOM, 3: LEFT
     }
-    
+
     return 2 // Default to BOTTOM
   }
 
   const renderBoard = () => {
-    switch(gameMode) {
+    switch (gameMode) {
       case '1v1':
-        return <TwoPlayerBoard 
+        return <TwoPlayerBoard
           gameCode={gameId}
           playerOrientation={getPlayerOrientation()}
           boardSize={gameSettings.boardSize || 8}
@@ -304,7 +306,7 @@ function GamePage() {
       case '1v1v1v1':
         return <FourPlayerBoard />
       default:
-        return <TwoPlayerBoard 
+        return <TwoPlayerBoard
           gameCode={gameId}
           playerOrientation={getPlayerOrientation()}
           boardSize={gameSettings.boardSize || 8}
@@ -319,13 +321,13 @@ function GamePage() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-	//function loop() {
-	//	console.log("frame")
-	//	requestAnimationFrame(loop)
-	//}
-	//useEffect(() => {
-	//	loop()
-	//}, [])
+  //function loop() {
+  //	console.log("frame")
+  //	requestAnimationFrame(loop)
+  //}
+  //useEffect(() => {
+  //	loop()
+  //}, [])
 
   return (
     <div className="game-page">
@@ -352,7 +354,7 @@ function GamePage() {
           </div>
           {/* Chat */}
           <div className="chat-section">
-            <div 
+            <div
               className="chat-messages"
               ref={chatMessagesRef}
             >
@@ -414,6 +416,14 @@ function GamePage() {
             >
               [ Feedback ]
             </Button>
+            <Button
+              variant="secondary"
+              borderStyle="solid"
+              onClick={soundActions.toggleMute}
+              className="control-btn"
+            >
+              [ {isMuted ? 'Unmute' : 'Mute'} Sound ]
+            </Button>
           </div>
         </aside>
       </div>
@@ -426,10 +436,10 @@ function GamePage() {
               {modalType === 'quit' && 'Do you want to quit?'}
               {modalType === 'game_over' && (
                 gameOverData?.winner === true ? 'You Won!' :
-                gameOverData?.winner === false ? 'Draw!' : 'You Lost!'
+                  gameOverData?.winner === false ? 'Draw!' : 'You Lost!'
               )}
             </h2>
-            
+
             {modalType === 'game_over' && (
               <div className="game-over-info">
                 <p>
@@ -440,8 +450,8 @@ function GamePage() {
                 </p>
               </div>
             )}
-            
-            
+
+
             <div className="pause-buttons">
               {modalType === 'pause' && (
                 <>
@@ -463,7 +473,7 @@ function GamePage() {
                   </Button>
                 </>
               )}
-              
+
               {modalType === 'quit' && (
                 <>
                   <Button
@@ -484,7 +494,7 @@ function GamePage() {
                   </Button>
                 </>
               )}
-              
+
               {modalType === 'game_over' && (
                 <Button
                   variant="primary"
@@ -499,7 +509,7 @@ function GamePage() {
           </div>
         </div>
       )}
-      
+
       {/* Feedback Modal */}
       <FeedbackModal
         isOpen={showFeedbackModal}
@@ -510,7 +520,7 @@ function GamePage() {
   )
 }
 
-export default GamePage 
+export default GamePage
 /*
                                                                             @@                                      
                                                                             @@                                      
