@@ -39,3 +39,10 @@ apps/*/.env.local
 *.sln
 *.sw?
 
+# Large audio files (exclude from git due to size limits)
+apps/web/public/music/*.mp3
+apps/web/public/music/*.jpeg
+apps/web/public/SFX/killed.wav
+
+# Keep only the small move.wav file for the sound effects feature
+
