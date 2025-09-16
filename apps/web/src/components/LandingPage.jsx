@@ -109,6 +109,11 @@ function LandingPage() {
       case 'Changelog':
         return (
           <div>
+            <h4>Version 0.1.20</h4>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added SFX for movment</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Various fixes</li>
+            </ul>
             <h4>Version 0.1.19</h4>
             <ul style={{ listStyle: 'none', padding: 0 }}>
               <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added clear piece images</li>
