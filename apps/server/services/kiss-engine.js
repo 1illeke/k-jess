@@ -156,8 +156,6 @@ export class KISSEngine {
   }
 
   isValidMove(fromSquare, toSquare, playerOrientation) {
-    console.log('=== KISS ENGINE VALIDATION ===')
-    console.log('Move:', { fromSquare, toSquare, playerOrientation })
     
     const piece = this.getPieceAt(fromSquare)
     if (!piece || piece.team !== playerOrientation) {
@@ -182,21 +180,22 @@ export class KISSEngine {
     }
 
     // Check if the move would leave the king in check
-    // TEMPORARILY DISABLED FOR DEBUGGING - TODO: Fix check detection
-    /*
     if (this.wouldLeaveKingInCheck(fromSquare, toSquare, playerOrientation)) {
       console.log('❌ KISS validation failed: Move would leave king in check')
-      console.log('Debug check details:', {
+      const currentCheck = this.isInCheck(playerOrientation)
+      const piece = this.getPieceAt(fromSquare)
+      console.log('🔍 Check validation details:', {
         fromSquare,
         toSquare,
         playerOrientation,
-        currentCheckStatus: this.isInCheck(playerOrientation)
+        pieceType: piece?.type,
+        currentlyInCheck: currentCheck.inCheck,
+        activeAttackers: currentCheck.activeAttackers?.length || 0,
+        cooldownAttackers: currentCheck.cooldownAttackers?.length || 0
       })
       return { valid: false, reason: 'Move would leave king in check' }
     }
-    */
 
-    console.log('KISS validation passed!')
     return { valid: true }
   }
 
@@ -320,8 +319,6 @@ export class KISSEngine {
   }
 
   makeMove(fromSquare, toSquare, playerOrientation) {
-    console.log('=== KISS ENGINE MOVE ===')
-    console.log('Move:', { fromSquare, toSquare, playerOrientation })
     
     const validation = this.isValidMove(fromSquare, toSquare, playerOrientation)
     
@@ -405,13 +402,19 @@ export class KISSEngine {
     // Check if pawn has reached the opposite end based on team
     switch (team) {
       case Orientation.TOP:
-        return y >= 12 // Reached bottom
+        return y >= 13 // Reached bottom back rank
       case Orientation.RIGHT:
-        return x <= 2 // Reached left
+        // In 4-player mode: reach LEFT's back rank (x=0)
+        // In 3-player mode: reach left edge of cross (x=3, since no LEFT player)
+        if (this.activePlayers.includes(Orientation.LEFT)) {
+          return x <= 0 // 4-player: reach LEFT's back rank
+        } else {
+          return x <= 3 // 3-player: reach left edge of cross
+        }
       case Orientation.BOTTOM:
-        return y <= 1 // Reached top
+        return y <= 0 // Reached top back rank
       case Orientation.LEFT:
-        return x >= 11 // Reached right
+        return x >= 13 // Reached right back rank
       default:
         return false
     }

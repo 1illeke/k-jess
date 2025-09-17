@@ -309,14 +309,6 @@ function GamePage() {
         break;
     }
 
-    console.log('🎯 ORIENTATION BY COLOR:', {
-      playerId,
-      myPlayerColor: myPlayer?.color,
-      orientation,
-      orientationName: ['TOP', 'RIGHT', 'BOTTOM', 'LEFT'][orientation],
-      totalPlayers: gamePlayers.length,
-      allPlayers: gamePlayers.map((p, idx) => ({ idx, id: p.id, name: p.name, color: p.color }))
-    })
 
     return orientation
   }

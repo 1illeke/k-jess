@@ -208,26 +208,9 @@ export default function FourPlayerBoard({
     if (!gameCode) return
 
     const cleanup = listenGame({
-      onGameState: (state) => {
-        console.log('🎮 4-player board received game state:', state.pieces?.length, 'pieces')
-        if (state.pieces) {
-          const piecesByTeam = {};
-          state.pieces.forEach(p => {
-            piecesByTeam[p.team] = (piecesByTeam[p.team] || 0) + 1;
-          });
-          console.log('📊 Pieces by team:', piecesByTeam);
-          console.log('🎯 My orientation:', playerOrientation, '- should control team', playerOrientation, 'pieces');
-          
-          // Show sample pieces for each team
-          [0, 1, 2, 3].forEach(team => {
-            const teamPieces = state.pieces.filter(p => p.team === team);
-            if (teamPieces.length > 0) {
-              console.log(`Team ${team} sample:`, teamPieces.slice(0, 2).map(p => p.square));
-            }
-          });
-        }
-        setPieces(state.pieces || [])
-      },
+       onGameState: (state) => {
+         setPieces(state.pieces || [])
+       },
       onMoveMade: (data) => {
         console.log('Move made:', data)
         soundActions.playMoveSound()

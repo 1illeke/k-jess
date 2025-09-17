@@ -150,17 +150,11 @@ function LobbyPage() {
         console.error('Lobby error:', err?.message || err);
         const errorMessage = err?.details || err?.message || err;
         if (errorMessage && errorMessage.includes('already taken')) {
-          // Handle duplicate name error
-          const newName = prompt(`Name "${playerName}" is already taken. Please choose a different name:`);
-          if (newName && newName.trim()) {
-            setPlayerName(newName.trim());
-            // Retry joining with new name
-            setTimeout(() => {
-              const code = gameId || inviteCode;
-              if (code) {
-                unsubscribeRef.current = lobbySocket.joinLobby({ code, playerName: newName.trim() }, handlers);
-              }
-            }, 100);
+          // Handle duplicate name error - redirect to invitation page
+          const code = gameId || inviteCode;
+          if (code) {
+            alert(`Name "${playerName}" is already taken. Please choose a different name.`);
+            navigate(`/invite/${code}`);
           }
         }
       },
