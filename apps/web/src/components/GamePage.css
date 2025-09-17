@@ -112,6 +112,15 @@
   font-weight: 600;
 }
 
+.player-color-circle {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
 .game-player .player-status {
   font-size: 0.85em;
   color: var(--secondary-text, #999);

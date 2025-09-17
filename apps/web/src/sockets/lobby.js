@@ -106,9 +106,10 @@ export function joinLobby({ code, playerName }, { onPlayers, onError, onLobbySta
 
 export function updateSettings({ code, settings }, { onError } = {}) {
   const handleError = (err) => onError?.(err);
+  const maxPlayers = getMaxPlayersFromMode(settings.mode);
   const backendSettings = {
-    mode: '2 Player',
-    maxPlayers: getMaxPlayersFromMode(settings.mode),
+    mode: settings.mode,
+    maxPlayers: maxPlayers,
     cooldownMs: 1000
   };
   

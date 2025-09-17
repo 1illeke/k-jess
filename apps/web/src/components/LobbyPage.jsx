@@ -146,7 +146,24 @@ function LobbyPage() {
           setGameMode(frontendMode)
         }
       },
-      onError: (err) => console.error('Lobby error:', err?.message || err),
+      onError: (err) => {
+        console.error('Lobby error:', err?.message || err);
+        const errorMessage = err?.details || err?.message || err;
+        if (errorMessage && errorMessage.includes('already taken')) {
+          // Handle duplicate name error
+          const newName = prompt(`Name "${playerName}" is already taken. Please choose a different name:`);
+          if (newName && newName.trim()) {
+            setPlayerName(newName.trim());
+            // Retry joining with new name
+            setTimeout(() => {
+              const code = gameId || inviteCode;
+              if (code) {
+                unsubscribeRef.current = lobbySocket.joinLobby({ code, playerName: newName.trim() }, handlers);
+              }
+            }, 100);
+          }
+        }
+      },
     }
     if (gameId) {
       unsubscribeRef.current = lobbySocket.joinLobby({ code: gameId, playerName }, handlers)
@@ -256,6 +273,17 @@ function LobbyPage() {
       localStorage.setItem('playerName', playerName)
     }
     lobbySocket.updatePlayerName({ code, name: playerName })
+  }
+
+  // Get color hex for display
+  const getPlayerColorHex = (colorName) => {
+    switch (colorName) {
+      case 'White': return '#ffffff'
+      case 'Black': return '#1a1a1a'
+      case 'Red': return '#dc2626'
+      case 'Blue': return '#2563eb'
+      default: return '#6b7280'
+    }
   }
 
   const getMaxPlayers = () => {
@@ -377,6 +405,13 @@ function LobbyPage() {
                 {lobbyPlayers.map((player) => (
                   <div key={player.id} className={`lobby-player ${!player.connected ? 'disconnected' : ''}`}>
                     <span className="player-name">
+                      <span 
+                        className="player-color-circle" 
+                        style={{ 
+                          backgroundColor: getPlayerColorHex(player.color),
+                          border: player.color === 'White' ? '1px solid #ccc' : 'none'
+                        }}
+                      ></span>
                       {player.name}
                       {player.id === hostPlayerId && (
                         <span className="host-tag">[HOST]</span>

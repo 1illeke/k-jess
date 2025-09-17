@@ -274,22 +274,51 @@ function GamePage() {
     }
   }
 
+  // Get color hex for display
+  const getPlayerColorHex = (colorName) => {
+    switch (colorName) {
+      case 'White': return '#ffffff'
+      case 'Black': return '#1a1a1a'
+      case 'Red': return '#dc2626'
+      case 'Blue': return '#2563eb'
+      default: return '#6b7280'
+    }
+  }
+
   // Get player orientation based on their position in the lobby
   const getPlayerOrientation = () => {
     const playerId = getPlayerId()
-    const playerIndex = gamePlayers.findIndex(p => p.id === playerId)
-
-    // For 2-player games: first player is BOTTOM, second is TOP
-    if (gamePlayers.length === 2) {
-      return playerIndex === 0 ? 2 : 0 // BOTTOM : TOP
+    const myPlayer = gamePlayers.find(p => p.id === playerId)
+    
+    // Instead of using array index, map directly by color to ensure consistency
+    // This matches the server's color → orientation mapping
+    let orientation = 2; // Default BOTTOM
+    
+    switch (myPlayer?.color) {
+      case 'White':
+        orientation = 2; // BOTTOM
+        break;
+      case 'Black':
+        orientation = 0; // TOP
+        break;
+      case 'Red':
+        orientation = 1; // RIGHT
+        break;
+      case 'Blue':
+        orientation = 3; // LEFT
+        break;
     }
 
-    // For 4-player games: assign orientations in order
-    if (gamePlayers.length === 4) {
-      return playerIndex // 0: TOP, 1: RIGHT, 2: BOTTOM, 3: LEFT
-    }
+    console.log('🎯 ORIENTATION BY COLOR:', {
+      playerId,
+      myPlayerColor: myPlayer?.color,
+      orientation,
+      orientationName: ['TOP', 'RIGHT', 'BOTTOM', 'LEFT'][orientation],
+      totalPlayers: gamePlayers.length,
+      allPlayers: gamePlayers.map((p, idx) => ({ idx, id: p.id, name: p.name, color: p.color }))
+    })
 
-    return 2 // Default to BOTTOM
+    return orientation
   }
 
   const renderBoard = () => {
@@ -302,9 +331,17 @@ function GamePage() {
           onGameOver={handleGameOver}
         />
       case '1v1v1':
-        return <ThreePlayerBoard />
+        return <ThreePlayerBoard 
+          gameCode={gameId}
+          playerOrientation={getPlayerOrientation()}
+          onGameOver={handleGameOver}
+        />
       case '1v1v1v1':
-        return <FourPlayerBoard />
+        return <FourPlayerBoard 
+          gameCode={gameId}
+          playerOrientation={getPlayerOrientation()}
+          onGameOver={handleGameOver}
+        />
       default:
         return <TwoPlayerBoard
           gameCode={gameId}
@@ -340,6 +377,13 @@ function GamePage() {
               {gamePlayers.map((player) => (
                 <div key={player.id} className={`game-player ${!player.connected ? 'offline' : ''}`}>
                   <span className="player-name">
+                    <span 
+                      className="player-color-circle" 
+                      style={{ 
+                        backgroundColor: getPlayerColorHex(player.color),
+                        border: player.color === 'White' ? '1px solid #ccc' : 'none'
+                      }}
+                    ></span>
                     {player.name}
                     {player.id === getPlayerId() && (
                       <span className="you-tag">(You)</span>

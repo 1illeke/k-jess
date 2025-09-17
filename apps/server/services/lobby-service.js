@@ -59,6 +59,13 @@ export class LobbyService {
       throw new Error('Lobby not found');
     }
 
+    // Check for duplicate names (excluding the same player rejoining)
+    const existingPlayerWithName = Array.from(lobby.players.values())
+      .find(p => p.name === name && p.playerId !== playerId);
+    if (existingPlayerWithName) {
+      throw new Error(`Name "${name}" is already taken. Please choose a different name.`);
+    }
+
     // Check if player is rejoining
     let existingPlayer = null;
     for (const player of lobby.players.values()) {
@@ -223,7 +230,7 @@ export class LobbyService {
     if (!lobby) return null;
 
     const host = lobby.players.get(lobby.hostId);
-    const colors = ['White', 'Black', 'Orange', 'Red'];
+    const colors = ['White', 'Black', 'Red', 'Blue'];
     
     // Sort players by join time to assign colors in order
     const sortedPlayers = Array.from(lobby.players.values()).sort((a, b) => a.joinedAt - b.joinedAt);

@@ -5,6 +5,7 @@ import cors from 'cors';
 import { LOBBY_EVENTS, GAME_EVENTS, CHAT_EVENTS, TIMER_EVENTS } from './constants/socket-events.js';
 import { LobbyService } from './services/lobby-service.js';
 import { ChessEngine } from './services/chess-engine.js';
+import { KISSEngine } from './services/kiss-engine.js';
 
 const app = express();
 const server = createServer(app);
@@ -345,8 +346,18 @@ io.on('connection', (socket) => {
       io.to(`game:${code}`).emit(GAME_EVENTS.STARTED, { code });
       gameTimers.set(code, { elapsed: 0, paused: true, startTime: Date.now() });
       
-      // Initialize chess engine for the game
-      const chessEngine = new ChessEngine(code, lobby.settings);
+      // Initialize appropriate chess engine based on player count
+      const connectedPlayers = Array.from(lobby.players.values()).filter(p => p.connected);
+      let chessEngine;
+      
+      if (connectedPlayers.length === 2) {
+        // Use original engine for 2-player games
+        chessEngine = new ChessEngine(code, lobby.settings);
+      } else {
+        // Use KISS engine for 3/4 player games
+        chessEngine = new KISSEngine(code, {...lobby.settings, maxPlayers: connectedPlayers.length});
+      }
+      
       chessEngines.set(code, chessEngine);
       
       // Send initial game state to all players
@@ -559,13 +570,21 @@ io.on('connection', (socket) => {
       let chessEngine = chessEngines.get(code);
       if (!chessEngine) {
         console.log('Creating new chess engine');
-        chessEngine = new ChessEngine(code, lobby.settings);
+        const connectedPlayers = Array.from(lobby.players.values()).filter(p => p.connected);
+        
+        if (connectedPlayers.length === 2) {
+          // Use original engine for 2-player games
+          chessEngine = new ChessEngine(code, lobby.settings);
+        } else {
+          // Use KISS engine for 3/4 player games
+          chessEngine = new KISSEngine(code, {...lobby.settings, maxPlayers: connectedPlayers.length});
+        }
+        
         chessEngines.set(code, chessEngine);
       }
 
-      console.log('Current player in engine:', chessEngine.currentPlayer);
       console.log('Player orientation:', playerOrientation);
-      console.log('Is player turn?', chessEngine.currentPlayer === playerOrientation);
+      console.log('Engine type:', chessEngine.constructor.name);
 
       // Make the move
       const result = chessEngine.makeMove(from, to, playerOrientation);
@@ -763,7 +782,7 @@ function emitLobbyState(io, code) {
 function getPlayerOrientation(lobby, player) {
   if (!lobby || !player) return null;
   
-  const players = Array.from(lobby.players.values());
+  const players = Array.from(lobby.players.values()).filter(p => p.connected);
   const playerIndex = players.findIndex(p => p.playerId === player.playerId);
   
   // For 2-player games: first player is BOTTOM, second is TOP
@@ -771,9 +790,16 @@ function getPlayerOrientation(lobby, player) {
     return playerIndex === 0 ? 2 : 0; // BOTTOM : TOP
   }
   
-  // For 4-player games: assign orientations in order
+  // For 3-player games: White=BOTTOM, Black=TOP, Red=RIGHT (no LEFT)
+  if (players.length === 3) {
+    const orientations = [2, 0, 1]; // BOTTOM, TOP, RIGHT (matches White, Black, Red)
+    return orientations[playerIndex] || 2; // Default to BOTTOM
+  }
+  
+  // For 4-player games: White=BOTTOM, Black=TOP, Red=RIGHT, Blue=LEFT
   if (players.length === 4) {
-    return playerIndex; // 0: TOP, 1: RIGHT, 2: BOTTOM, 3: LEFT
+    const orientations = [2, 0, 1, 3]; // BOTTOM, TOP, RIGHT, LEFT (matches White, Black, Red, Blue)
+    return orientations[playerIndex] || 2; // Default to BOTTOM
   }
   
   return 2; // Default to BOTTOM

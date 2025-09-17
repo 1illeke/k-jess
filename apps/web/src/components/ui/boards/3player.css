@@ -1,32 +1,80 @@
-/* Kill me now */
+.chess-board-3p {
+  --grid-size: 14;
+  user-select: none;
+  border: 3px solid var(--border-color);
+  position: relative;
+  width: calc(100vh - 200px);
+  height: calc(100vh - 200px);
+  aspect-ratio: 1;
+  position: relative;
+}
 
-.threeplayer-container {
-    width:  calc(100vh - 140px);
-    height: calc(100vh - 140px);
-    max-width: 1000px;
-    max-height: 1000px;
-    margin: auto;
-    border: 3px solid var(--border-color);   /* optional, if you want a border */
-    position: relative;
-    aspect-ratio: 960 / 831.3843876330611;   /* preserves the SVG’s natural shape */
-  }
-  
-  /* let the SVG fill the container */
-  .threeplayer-container svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-  
-  /* your utility classes */
-  .select-none { user-select: none; }
-  .h-full      { height: 100%; }
-  .w-full      { width: 100%; }
-  .pointer-events-none { pointer-events: none; }
-  
-  /* hover effect on tiles (optional) */
-  .threeplayer-container svg polygon:hover {
-    stroke: #fff;
-    stroke-width: 2;
-    cursor: pointer;
-  }
+.chess-squares-3p {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-size), 1fr);
+  grid-template-rows: repeat(var(--grid-size), 1fr);
+}
+
+.chess-board-3p::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border: 1px solid var(--accent-border);
+  pointer-events: none;
+}
+
+.chess-square-3p {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.chess-square-3p.light {
+  background: var(--accent-bg);
+}
+
+.chess-square-3p.dark {
+  background: var(--bg-color);
+  border: 1px solid var(--accent-border);
+}
+
+.chess-square-3p:hover {
+  background: var(--accent-border);
+}
+
+.chess-square-invalid {
+  background-color: transparent;
+}
+
+.chess-piece {
+  aspect-ratio: 1;
+  position: absolute;
+  cursor: pointer;
+}
+
+.chess-piece.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.chess-piece.selected {
+  filter: brightness(1.3) drop-shadow(0 0 10px rgba(255, 255, 0, 0.8));
+}
+
+.move {
+  background-color: #228822;
+  opacity: 0.3;
+  aspect-ratio: 1;
+  position: absolute;
+}
+
+.cooldown-overlay {
+  pointer-events: none;
+}
