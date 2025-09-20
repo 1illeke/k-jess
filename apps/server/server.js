@@ -346,11 +346,12 @@ io.on('connection', (socket) => {
       io.to(`game:${code}`).emit(GAME_EVENTS.STARTED, { code });
       gameTimers.set(code, { elapsed: 0, paused: true, startTime: Date.now() });
       
-      // Initialize appropriate chess engine based on player count
+      // Initialize appropriate chess engine based on game mode setting
       const connectedPlayers = Array.from(lobby.players.values()).filter(p => p.connected);
       let chessEngine;
       
-      if (connectedPlayers.length === 2) {
+      // Use game mode setting to determine engine, not player count
+      if (lobby.settings.mode === '1v1') {
         // Use original engine for 2-player games
         chessEngine = new ChessEngine(code, lobby.settings);
       } else {
@@ -572,7 +573,8 @@ io.on('connection', (socket) => {
         console.log('Creating new chess engine');
         const connectedPlayers = Array.from(lobby.players.values()).filter(p => p.connected);
         
-        if (connectedPlayers.length === 2) {
+        // Use game mode setting to determine engine, not player count
+        if (lobby.settings.mode === '1v1') {
           // Use original engine for 2-player games
           chessEngine = new ChessEngine(code, lobby.settings);
         } else {

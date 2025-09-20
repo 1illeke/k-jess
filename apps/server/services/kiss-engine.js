@@ -173,6 +173,11 @@ export class KISSEngine {
       return { valid: false, reason: 'Cannot capture your own piece' }
     }
 
+    // Check if trying to capture a king (which is not allowed)
+    if (targetPiece && targetPiece.type === Piece.KING) {
+      return { valid: false, reason: 'Cannot capture a king' }
+    }
+
     // Check if the move is within the piece's valid moves
     const validMoves = this.getValidMovesForPiece(piece)
     if (!validMoves.includes(toSquare)) {
