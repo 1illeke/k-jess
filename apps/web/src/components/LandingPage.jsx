@@ -109,6 +109,16 @@ function LandingPage() {
       case 'Changelog':
         return (
           <div>
+            <h4>Version 0.1.25</h4>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added SFX for movment</li>
+              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added 3 player mode</li>
+              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added 4 player mode</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Fixed black screen issues</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Fixed black not promoting</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Some 4 player issues remain</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Various fixes</li>
+            </ul>
             <h4>Version 0.1.20</h4>
             <ul style={{ listStyle: 'none', padding: 0 }}>
               <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added SFX for movment</li>
@@ -213,8 +223,6 @@ function LandingPage() {
         <div className="wip-modal-content">
           <p>This is a Work In Progress project.</p>
           <p>Currently features may be broken or not added yet.</p>
-          <p>...</p>
-          <p>Only 2 player version is working for now.</p>
         </div>
       </Modal>
 
