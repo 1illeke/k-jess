@@ -56,17 +56,14 @@ function GamePage() {
     const stopTimer = timerSocket.listenTimer({
       onUpdate: ({ code, elapsed }) => {
         const currentCode = gameId ? gameId : 'default'
-        console.log(`Timer update received: ${elapsed}s for game ${code}`);
         if (currentCode === code) {
           setGameTime(elapsed)
-          console.log(`Updated game time to: ${elapsed}s`);
         }
       }
     })
     
     // Test timer start immediately when component mounts
     if (gameId) {
-      console.log('Component mounted, testing timer start');
       setTimeout(() => {
         timerSocket.startTimer({ code: gameId });
       }, 1000);

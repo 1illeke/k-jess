@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import { LOBBY_EVENTS, GAME_EVENTS, CHAT_EVENTS, TIMER_EVENTS } from './constants/socket-events.js';
 import { LobbyService } from './services/lobby-service.js';
-import { ChessEngine } from './services/chess-engine.js';
+import { ChessEngine, Piece } from './services/chess-engine.js';
 import { KISSEngine } from './services/kiss-engine.js';
 
 const app = express();
@@ -699,6 +699,19 @@ io.on('connection', (socket) => {
       console.log('Player orientation:', playerOrientation);
       console.log('Engine type:', chessEngine.constructor.name);
 
+      // Check if move requires promotion
+      if (chessEngine.requiresPromotion(from, to, playerOrientation)) {
+        console.log('Move requires promotion');
+        if (ack) ack({ 
+          success: false, 
+          error: 'Promotion required', 
+          requiresPromotion: true,
+          from,
+          to
+        });
+        return;
+      }
+
       // Make the move
       const result = chessEngine.makeMove(from, to, playerOrientation);
       console.log('Move result:', result);
@@ -797,6 +810,154 @@ io.on('connection', (socket) => {
       console.log(`Move made in game ${code}: ${from} -> ${to}`);
     } catch (error) {
       console.error('Error making move:', error);
+      if (ack) ack({ success: false, error: error.message });
+    }
+  });
+
+  // Handle pawn promotion
+  socket.on(GAME_EVENTS.PAWN_PROMOTION, (data, ack) => {
+    try {
+      const { code, from, to, promotionPiece, playerOrientation } = data || {};
+      console.log('=== BACKEND PROMOTION DEBUG ===');
+      console.log('Promotion data:', { code, from, to, promotionPiece, playerOrientation });
+      
+      if (!code || !from || !to || promotionPiece === null || promotionPiece === undefined) {
+        console.log('Missing required fields for promotion');
+        if (ack) ack({ success: false, error: 'Missing required fields for promotion' });
+        return;
+      }
+
+      const lobby = lobbyService.getLobby(code);
+      if (!lobby) {
+        console.log('Game not found');
+        if (ack) ack({ success: false, error: 'Game not found' });
+        return;
+      }
+
+      // Check if game has ended
+      if (lobby.phase === 'ended') {
+        console.log('Game has ended, cannot make moves');
+        if (ack) ack({ success: false, error: 'Game has ended' });
+        return;
+      }
+
+      // Get chess engine for this game
+      const chessEngine = chessEngines.get(code);
+      if (!chessEngine) {
+        console.log('Chess engine not found');
+        if (ack) ack({ success: false, error: 'Chess engine not found' });
+        return;
+      }
+
+      // Validate promotion piece
+      console.log('Piece constants:', Piece);
+      console.log('Promotion piece received:', promotionPiece);
+      const validPromotionPieces = [Piece.QUEEN, Piece.ROOK, Piece.BISHOP, Piece.KNIGHT];
+      console.log('Valid promotion pieces:', validPromotionPieces);
+      if (!validPromotionPieces.includes(promotionPiece)) {
+        console.log('Invalid promotion piece:', promotionPiece);
+        if (ack) ack({ success: false, error: 'Invalid promotion piece' });
+        return;
+      }
+
+      // Make the move with promotion
+      const result = chessEngine.makeMove(from, to, playerOrientation, promotionPiece);
+      console.log('Promotion move result:', result);
+      
+      if (!result.success) {
+        console.log('Promotion move failed:', result.error);
+        if (ack) ack({ success: false, error: result.error });
+        return;
+      }
+
+      // Send game state to all players in the game room
+      const gameRoom = io.sockets.adapter.rooms.get(`game:${code}`);
+      if (gameRoom) {
+        for (const socketId of gameRoom) {
+          const playerSocket = io.sockets.sockets.get(socketId);
+          if (playerSocket) {
+            // Get player's orientation from lobby
+            const player = lobby.players.get(socketId);
+            const playerOrientation = getPlayerOrientation(lobby, player);
+            
+            // Send game state for this specific player's perspective
+            const gameState = chessEngine.getGameStateForPlayer(playerOrientation);
+            playerSocket.emit(GAME_EVENTS.GAME_STATE, gameState);
+          }
+        }
+      }
+
+      // Handle game status events (same as regular move)
+      if (result.gameStatus) {
+        const status = result.gameStatus;
+        
+        // Emit check events
+        for (const [team, checkResult] of Object.entries(status.inCheck)) {
+          if (checkResult.inCheck) {
+            io.to(`game:${code}`).emit(GAME_EVENTS.CHECK, {
+              team: parseInt(team),
+              attackingPiece: checkResult.attackingPiece,
+              kingSquare: checkResult.kingSquare
+            });
+          }
+        }
+        
+        // Emit checkmate events
+        for (const [team, checkmateResult] of Object.entries(status.inCheckmate)) {
+          if (checkmateResult.inCheckmate) {
+            io.to(`game:${code}`).emit(GAME_EVENTS.CHECKMATE, {
+              team: parseInt(team),
+              allAttackers: checkmateResult.allAttackers,
+              kingSquare: checkmateResult.kingSquare,
+              winner: status.winner,
+              loser: status.loser
+            });
+          }
+        }
+        
+        // Emit stalemate events
+        for (const [team, stalemateResult] of Object.entries(status.inStalemate)) {
+          if (stalemateResult.inStalemate) {
+            io.to(`game:${code}`).emit(GAME_EVENTS.STALEMATE, {
+              team: parseInt(team)
+            });
+          }
+        }
+        
+        // Emit game over event
+        if (status.gameOver) {
+          // Pause the timer when game ends
+          const timer = gameTimers.get(code);
+          if (timer && !timer.paused) {
+            timer.elapsed += Date.now() - timer.startTime;
+            timer.paused = true;
+            gameTimers.set(code, timer);
+            console.log(`Timer paused for game ${code} - game over: ${status.gameOverReason}`);
+          }
+          
+          // Set lobby phase to ended
+          lobby.phase = 'ended';
+          lobby.endedAt = Date.now();
+          console.log(`Game ${code} ended - lobby phase set to ended`);
+          
+          io.to(`game:${code}`).emit(GAME_EVENTS.GAME_OVER, {
+            reason: status.gameOverReason,
+            winner: status.winner
+          });
+        }
+      }
+
+      // Broadcast the move to all players
+      io.to(`game:${code}`).emit(GAME_EVENTS.MOVE_MADE, {
+        move: result.move,
+        gameState: result.gameState,
+        gameStatus: result.gameStatus
+      });
+
+      if (ack) ack({ success: true, move: result.move });
+      console.log(`Promotion move made in game ${code}: ${from} -> ${to} (${promotionPiece})`);
+    } catch (error) {
+      console.error('Error handling pawn promotion:', error);
       if (ack) ack({ success: false, error: error.message });
     }
   });

@@ -56,16 +56,38 @@ export function quitGame({ code, playerName }, { onEnded, onNavigate } = {}) {
   socket.once(GAME_EVENTS.NAVIGATE_AWAY, handleNavigate)
 }
 
-export function makeMove({ code, from, to, playerOrientation }, { onMoveMade, onError } = {}) {
+export function makeMove({ code, from, to, playerOrientation }, { onMoveMade, onError, onPromotionRequired } = {}) {
   const handleMoveMade = (payload) => onMoveMade?.(payload)
   const handleError = (payload) => onError?.(payload)
+  const handlePromotionRequired = (payload) => onPromotionRequired?.(payload)
 
   // Use acknowledgement for immediate feedback
   socket.emit(GAME_EVENTS.MAKE_MOVE, { code, from, to, playerOrientation }, (response) => {
     if (response?.success) {
       onMoveMade?.(response);
+    } else if (response?.requiresPromotion) {
+      onPromotionRequired?.({ from, to });
     } else {
       onError?.({ reason: 'MOVE_FAILED', details: response?.error || 'Failed to make move' });
+    }
+  })
+  
+  socket.once(GAME_EVENTS.MOVE_MADE, handleMoveMade)
+  socket.once(GAME_EVENTS.ERROR, handleError)
+}
+
+export function makePromotionMove({ code, from, to, promotionPiece, playerOrientation }, { onMoveMade, onError } = {}) {
+  console.log('makePromotionMove called with:', { code, from, to, promotionPiece, playerOrientation })
+  const handleMoveMade = (payload) => onMoveMade?.(payload)
+  const handleError = (payload) => onError?.(payload)
+
+  // Use acknowledgement for immediate feedback
+  socket.emit(GAME_EVENTS.PAWN_PROMOTION, { code, from, to, promotionPiece, playerOrientation }, (response) => {
+    console.log('makePromotionMove response:', response)
+    if (response?.success) {
+      onMoveMade?.(response);
+    } else {
+      onError?.({ reason: 'PROMOTION_FAILED', details: response?.error || 'Failed to make promotion move' });
     }
   })
   

@@ -291,7 +291,7 @@ export class ChessEngine {
   }
 
   // Execute a move
-  makeMove(fromSquare, toSquare, playerOrientation) {
+  makeMove(fromSquare, toSquare, playerOrientation, promotionPiece = null) {
     console.log('=== CHESS ENGINE MOVE DEBUG ===');
     console.log('Move:', { fromSquare, toSquare, playerOrientation });
     
@@ -355,10 +355,12 @@ export class ChessEngine {
       const [, y] = this.getSquarePosition(toSquare)
       if ((piece.team === Orientation.BOTTOM && y === 0) || 
           (piece.team === Orientation.TOP && y === 7)) {
-        piece.type = Piece.QUEEN
+        // Use provided promotion piece or default to Queen
+        const promotionType = promotionPiece !== null ? promotionPiece : Piece.QUEEN
+        piece.type = promotionType
         // Update cooldown for promoted piece
-        piece.cooldown = Date.now() + cooldownTimes[Piece.QUEEN]
-        console.log(`Pawn promoted to Queen for team ${piece.team} at position (${toSquare})`);
+        piece.cooldown = Date.now() + cooldownTimes[promotionType]
+        console.log(`Pawn promoted to ${promotionType} for team ${piece.team} at position (${toSquare})`);
       }
     }
 
@@ -784,6 +786,18 @@ export class ChessEngine {
     }
     
     return materialCount
+  }
+
+  // Check if a move requires pawn promotion
+  requiresPromotion(fromSquare, toSquare, playerOrientation) {
+    const piece = this.getPieceAt(fromSquare)
+    if (!piece || piece.type !== Piece.PAWN || piece.team !== playerOrientation) {
+      return false
+    }
+    
+    const [, y] = this.getSquarePosition(toSquare)
+    return (piece.team === Orientation.BOTTOM && y === 0) || 
+           (piece.team === Orientation.TOP && y === 7)
   }
 
   // Get current game state

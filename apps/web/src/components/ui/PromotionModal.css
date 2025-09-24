@@ -1,0 +1,143 @@
+.promotion-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.promotion-modal {
+  background: var(--bg-color, #1a1a1a);
+  border: 2px solid var(--border-color, #333);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.promotion-modal-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.promotion-modal-header h3 {
+  color: var(--text-color, #fff);
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.promotion-modal-header p {
+  color: var(--secondary-text, #ccc);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.promotion-pieces {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.promotion-piece {
+  background: var(--accent-bg, rgba(255, 255, 255, 0.05));
+  border: 2px solid var(--border-color, #333);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 120px;
+}
+
+.promotion-piece:hover {
+  background: var(--accent-bg, rgba(255, 255, 255, 0.1));
+  border-color: var(--accent-color, #4ade80);
+  transform: translateY(-2px);
+}
+
+.promotion-piece.selected {
+  background: var(--accent-color, #4ade80);
+  border-color: var(--accent-color, #4ade80);
+  color: #000;
+}
+
+.promotion-piece-image {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.promotion-piece-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-color, #fff);
+}
+
+.promotion-piece.selected .promotion-piece-name {
+  color: #000;
+}
+
+.promotion-piece-symbol {
+  font-size: 1.2rem;
+  color: var(--secondary-text, #ccc);
+}
+
+.promotion-piece.selected .promotion-piece-symbol {
+  color: #000;
+}
+
+.promotion-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.promotion-cancel {
+  background: var(--warning-bg, rgba(255, 165, 0, 0.1));
+  border: 1px solid var(--warning-color, #ffa500);
+  color: var(--warning-color, #ffa500);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.promotion-cancel:hover {
+  background: var(--warning-color, #ffa500);
+  color: #000;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .promotion-modal {
+    padding: 16px;
+    width: 95%;
+  }
+  
+  .promotion-pieces {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .promotion-piece {
+    min-height: 100px;
+    padding: 12px;
+  }
+  
+  .promotion-piece-image {
+    width: 40px;
+    height: 40px;
+  }
+}
