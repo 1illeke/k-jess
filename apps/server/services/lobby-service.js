@@ -238,7 +238,7 @@ export class LobbyService {
     }, 30000); // 30 seconds
   }
 
-  getPublicView(code) {
+  getPublicView(code, playerOrientations = null) {
     const lobby = this.getLobby(code);
     if (!lobby) return null;
 
@@ -248,28 +248,38 @@ export class LobbyService {
     const sortedPlayers = Array.from(lobby.players.values()).sort((a, b) => a.joinedAt - b.joinedAt);
     
     const players = sortedPlayers.map((player, index) => {
-      // Assign colors based on the same logic as orientations in server.js
-      // Use a stable assignment that doesn't change when new players join
       let color;
       
-      // Always assign colors based on join order, regardless of current player count
-      // This ensures colors don't shift when new players join
-      if (index === 0) {
-        // First player (host) always gets White (BOTTOM orientation)
-        color = 'White';
-      } else if (index === 1) {
-        // Second player always gets Black (TOP orientation)
-        color = 'Black';
-      } else if (index === 2) {
-        // Third player always gets Red (RIGHT orientation)
-        color = 'Red';
-      } else if (index === 3) {
-        // Fourth player always gets Blue (LEFT orientation)
-        color = 'Blue';
+      // If game has started and we have stored orientations, use them
+      if (lobby.phase === 'in_game' && playerOrientations && playerOrientations.has(player.playerId)) {
+        const orientation = playerOrientations.get(player.playerId);
+        // Map orientation to color (same as server.js logic)
+        switch (orientation) {
+          case 2: color = 'White'; break;  // BOTTOM
+          case 0: color = 'Black'; break;  // TOP
+          case 1: color = 'Red'; break;    // RIGHT
+          case 3: color = 'Blue'; break;   // LEFT
+          default: color = 'White'; break;
+        }
       } else {
-        // Fallback for more than 4 players (shouldn't happen with current max)
-        const colors = ['White', 'Black', 'Red', 'Blue'];
-        color = colors[index % colors.length];
+        // For lobby phase or if no stored orientations, assign based on join order
+        if (index === 0) {
+          // First player (host) always gets White (BOTTOM orientation)
+          color = 'White';
+        } else if (index === 1) {
+          // Second player always gets Black (TOP orientation)
+          color = 'Black';
+        } else if (index === 2) {
+          // Third player always gets Red (RIGHT orientation)
+          color = 'Red';
+        } else if (index === 3) {
+          // Fourth player always gets Blue (LEFT orientation)
+          color = 'Blue';
+        } else {
+          // Fallback for more than 4 players (shouldn't happen with current max)
+          const colors = ['White', 'Black', 'Red', 'Blue'];
+          color = colors[index % colors.length];
+        }
       }
       
       return {

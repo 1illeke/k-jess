@@ -1076,7 +1076,9 @@ io.on('connection', (socket) => {
 
 // Helper function to emit lobby state
 function emitLobbyState(io, code) {
-  const lobbyPublic = lobbyService.getPublicView(code);
+  // Get stored orientations if game has started
+  const orientations = playerOrientations.get(code) || null;
+  const lobbyPublic = lobbyService.getPublicView(code, orientations);
   if (lobbyPublic) {
     io.to(code).emit(LOBBY_EVENTS.STATE, {
       lobbyPublic,
