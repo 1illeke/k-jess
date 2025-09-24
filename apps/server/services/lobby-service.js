@@ -234,6 +234,7 @@ export class LobbyService {
     // Clean up after a delay
     setTimeout(() => {
       this.lobbies.delete(code);
+      // Note: playerOrientations cleanup should be handled by the main server
     }, 30000); // 30 seconds
   }
 
@@ -282,5 +283,10 @@ export class LobbyService {
         lobby.cleanupTimer = null;
       }
     }
+  }
+
+  // Get all active lobby codes for cleanup
+  getActiveCodes() {
+    return Array.from(this.lobbies.keys());
   }
 }

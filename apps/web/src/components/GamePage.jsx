@@ -147,6 +147,23 @@ function GamePage() {
           // end logic needs to be updated
         }
       },
+      onGameOver: (gameOverData) => {
+        console.log('Game over event received:', gameOverData);
+        
+        // Determine if current player won
+        const currentPlayerOrientation = getPlayerOrientation();
+        const playerWon = gameOverData.winner && gameOverData.winner.includes(currentPlayerOrientation);
+        
+        console.log('Current player orientation:', currentPlayerOrientation);
+        console.log('Winner orientations:', gameOverData.winner);
+        console.log('Player won:', playerWon);
+        
+        handleGameOver({
+          type: 'game_over',
+          winner: playerWon,
+          reason: gameOverData.reason
+        });
+      },
       onGameState: (gameState) => {
         const currentCode = gameId ? gameId : 'default'
         if (gameState && gameState.status && gameState.status.materialCount) {
@@ -577,8 +594,12 @@ function GamePage() {
               {modalType === 'pause' && `${pausedBy} paused the game`}
               {modalType === 'quit' && 'Do you want to quit?'}
               {modalType === 'game_over' && (
-                gameOverData?.winner === true ? 'You Won!' :
-                  gameOverData?.winner === false ? 'Draw!' : 'You Lost!'
+                (() => {
+                  console.log('Game over modal - winner value:', gameOverData?.winner, 'type:', typeof gameOverData?.winner);
+                  if (gameOverData?.winner === true) return 'You Won!';
+                  if (gameOverData?.winner === false) return 'You Lost!';
+                  return 'Draw!';
+                })()
               )}
             </h2>
 
