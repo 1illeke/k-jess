@@ -353,10 +353,12 @@ export class ChessEngine {
     // Check for pawn promotion
     if (piece.type === Piece.PAWN) {
       const [, y] = this.getSquarePosition(toSquare)
-      if (y <= this.boardSize - 8) {
+      if ((piece.team === Orientation.BOTTOM && y === 0) || 
+          (piece.team === Orientation.TOP && y === 7)) {
         piece.type = Piece.QUEEN
         // Update cooldown for promoted piece
         piece.cooldown = Date.now() + cooldownTimes[Piece.QUEEN]
+        console.log(`Pawn promoted to Queen for team ${piece.team} at position (${toSquare})`);
       }
     }
 
