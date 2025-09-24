@@ -745,7 +745,8 @@ export class KISSEngine {
       winner: null,
       loser: null,
       gameOver: false,
-      gameOverReason: null
+      gameOverReason: null,
+      materialCount: this.getMaterialCount()
     }
     
     // Check insufficient material first
@@ -781,6 +782,35 @@ export class KISSEngine {
     }
     
     return status
+  }
+
+  getMaterialCount() {
+    const materialCount = {}
+    
+    // Initialize material count for each active team
+    for (const team of this.activePlayers) {
+      materialCount[team] = {
+        total: 0,
+        pieces: {
+          [Piece.KING]: 0,
+          [Piece.QUEEN]: 0,
+          [Piece.ROOK]: 0,
+          [Piece.BISHOP]: 0,
+          [Piece.KNIGHT]: 0,
+          [Piece.PAWN]: 0
+        }
+      }
+    }
+    
+    // Count pieces for each team
+    for (const piece of this.pieces) {
+      if (!piece.dead && this.activePlayers.includes(piece.team)) {
+        materialCount[piece.team].total++
+        materialCount[piece.team].pieces[piece.type]++
+      }
+    }
+    
+    return materialCount
   }
 
   getGameState() {

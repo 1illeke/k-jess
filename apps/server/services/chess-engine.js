@@ -710,7 +710,8 @@ export class ChessEngine {
       winner: null,
       loser: null,
       gameOver: false,
-      gameOverReason: null
+      gameOverReason: null,
+      materialCount: this.getMaterialCount()
     }
     
     // Check insufficient material first
@@ -752,6 +753,35 @@ export class ChessEngine {
     }
     
     return status
+  }
+
+  getMaterialCount() {
+    const materialCount = {}
+    
+    // Initialize material count for both teams
+    for (const team of [Orientation.TOP, Orientation.BOTTOM]) {
+      materialCount[team] = {
+        total: 0,
+        pieces: {
+          [Piece.KING]: 0,
+          [Piece.QUEEN]: 0,
+          [Piece.ROOK]: 0,
+          [Piece.BISHOP]: 0,
+          [Piece.KNIGHT]: 0,
+          [Piece.PAWN]: 0
+        }
+      }
+    }
+    
+    // Count pieces for each team
+    for (const piece of this.pieces) {
+      if (!piece.dead && (piece.team === Orientation.TOP || piece.team === Orientation.BOTTOM)) {
+        materialCount[piece.team].total++
+        materialCount[piece.team].pieces[piece.type]++
+      }
+    }
+    
+    return materialCount
   }
 
   // Get current game state

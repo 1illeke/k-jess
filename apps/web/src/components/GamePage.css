@@ -306,6 +306,68 @@
   overflow: hidden;
 }
 
+/* Material Count Display */
+.material-count-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.material-title {
+  font-size: 12px;
+  font-weight: bold;
+  margin: 0 0 6px 0;
+  color: var(--text-color);
+  text-align: center;
+}
+
+.material-counts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.material-team {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.team-name {
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.team-score {
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 4px;
+  color: white !important;
+}
+
+.piece-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.piece-count {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  padding: 2px 4px;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: bold;
+  color: white;
+}
+
 .controls-section::before {
   content: '';
   position: absolute;

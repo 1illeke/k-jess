@@ -194,12 +194,24 @@ export class LobbyService {
     }
 
     const connectedPlayers = Array.from(lobby.players.values()).filter(p => p.connected);
-    if (connectedPlayers.length < 2) {
-      throw new Error('Need at least 2 players to start');
+    
+    // Validate player count based on game mode
+    const requiredPlayers = this.getRequiredPlayersForMode(lobby.settings.mode);
+    if (connectedPlayers.length < requiredPlayers) {
+      throw new Error(`Need at least ${requiredPlayers} players to start a ${lobby.settings.mode} game`);
     }
 
     lobby.phase = 'in_game';
     lobby.startedAt = Date.now();
+  }
+
+  getRequiredPlayersForMode(mode) {
+    switch (mode) {
+      case '1v1': return 2;
+      case '1v1v1': return 3;
+      case '1v1v1v1': return 4;
+      default: return 2;
+    }
   }
 
   endLobby({ code, byPlayerId, reason }) {

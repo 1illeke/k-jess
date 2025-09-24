@@ -28,6 +28,7 @@ function GamePage() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [chatMessages, setChatMessages] = useState(() => [])
   const [newMessage, setNewMessage] = useState('')
+  const [materialCount, setMaterialCount] = useState({})
   const [gamePlayers, setGamePlayers] = useState(() => {
     return lobbyPublic.map(player => ({
       id: player.id || player.playerId,
@@ -54,23 +55,37 @@ function GamePage() {
     const stopTimer = timerSocket.listenTimer({
       onUpdate: ({ code, elapsed }) => {
         const currentCode = gameId ? gameId : 'default'
-        if (currentCode === code) setGameTime(elapsed)
+        console.log(`Timer update received: ${elapsed}s for game ${code}`);
+        if (currentCode === code) {
+          setGameTime(elapsed)
+          console.log(`Updated game time to: ${elapsed}s`);
+        }
       }
     })
+    
+    // Test timer start immediately when component mounts
+    if (gameId) {
+      console.log('Component mounted, testing timer start');
+      setTimeout(() => {
+        timerSocket.startTimer({ code: gameId });
+      }, 1000);
+    }
+    
     return () => stopTimer && stopTimer()
   }, [gameId])
 
   // Countdown effect - start timer after 3 seconds
   useEffect(() => {
     if (countdown && countdown > 0) {
+      console.log(`Countdown: ${countdown}`);
       const timer = setTimeout(() => {
         setCountdown(countdown - 1)
       }, 1000)
       return () => clearTimeout(timer)
     } else if (countdown === 0) {
+      console.log('Countdown finished, timer should already be running on server');
       setCountdown(null)
-      // Start the actual timer
-      timerSocket.startTimer({ code: gameId || 'default' })
+      // Timer is already running on server, no need to start it
     }
   }, [countdown, gameId])
 
@@ -79,7 +94,8 @@ function GamePage() {
     if (!gameId) return;
 
     const handleLobbyStarted = ({ settings }) => {
-      // countdown
+      // This is a new game start, always start countdown
+      console.log('Lobby started event received, starting countdown');
       setIsPaused(false)
       setCountdown(3)
     }
@@ -90,6 +106,11 @@ function GamePage() {
       socket.off(LOBBY_EVENTS.STARTED, handleLobbyStarted);
     }
   }, [gameId])
+
+  // Debug countdown state
+  useEffect(() => {
+    console.log('Countdown state changed:', countdown);
+  }, [countdown])
 
   // Listen to game lifecycle
   useEffect(() => {
@@ -124,6 +145,12 @@ function GamePage() {
         const currentCode = gameId ? gameId : 'default'
         if (currentCode === code) {
           // end logic needs to be updated
+        }
+      },
+      onGameState: (gameState) => {
+        const currentCode = gameId ? gameId : 'default'
+        if (gameState && gameState.status && gameState.status.materialCount) {
+          setMaterialCount(gameState.status.materialCount)
         }
       }
     })
@@ -174,10 +201,8 @@ function GamePage() {
           setGamePlayers(players);
         }
 
-        // Check if lobby is already in game phase and start countdown if needed
-        if (lobbyPublic?.phase === 'in_game' && countdown === null && !isPaused) {
-          setCountdown(3);
-        }
+        // Don't automatically start countdown here - let the lobby start event handle it
+        // This prevents countdown from starting when rejoining existing games
       };
 
       socket.on('lobby:state', handleLobbyState);
@@ -285,32 +310,78 @@ function GamePage() {
     }
   }
 
+  // Get team name from orientation
+  const getTeamName = (orientation) => {
+    switch (orientation) {
+      case 0: return 'Black'  // TOP
+      case 1: return 'Red'    // RIGHT
+      case 2: return 'White'   // BOTTOM
+      case 3: return 'Blue'    // LEFT
+      default: return 'Unknown'
+    }
+  }
+
+  // Get piece symbol for display
+  const getPieceSymbol = (pieceType) => {
+    switch (pieceType) {
+      case 0: return '♔' // KING
+      case 1: return '♕' // QUEEN
+      case 2: return '♖' // ROOK
+      case 3: return '♗' // BISHOP
+      case 4: return '♘' // KNIGHT
+      case 5: return '♙' // PAWN
+      default: return '?'
+    }
+  }
+
+  // Get piece value for scoring
+  const getPieceValue = (pieceType) => {
+    switch (pieceType) {
+      case 0: return 0   // KING (infinite value, but 0 for material count)
+      case 1: return 9   // QUEEN
+      case 2: return 5   // ROOK
+      case 3: return 3   // BISHOP
+      case 4: return 3   // KNIGHT
+      case 5: return 1   // PAWN
+      default: return 0
+    }
+  }
+
+  // Calculate total material score
+  const calculateMaterialScore = (pieces) => {
+    let total = 0
+    for (const [pieceType, count] of Object.entries(pieces)) {
+      const value = getPieceValue(parseInt(pieceType))
+      total += value * count
+    }
+    return total
+  }
+
   // Get player orientation based on their position in the lobby
   const getPlayerOrientation = () => {
     const playerId = getPlayerId()
     const myPlayer = gamePlayers.find(p => p.id === playerId)
     
-    // Instead of using array index, map directly by color to ensure consistency
-    // This matches the server's color → orientation mapping
-    let orientation = 2; // Default BOTTOM
+    // Sort players by join time to match server logic
+    const sortedPlayers = [...gamePlayers].sort((a, b) => {
+      // Use a consistent sorting method - by player ID for now since we don't have join time
+      return a.id.localeCompare(b.id)
+    })
     
-    switch (myPlayer?.color) {
-      case 'White':
-        orientation = 2; // BOTTOM
-        break;
-      case 'Black':
-        orientation = 0; // TOP
-        break;
-      case 'Red':
-        orientation = 1; // RIGHT
-        break;
-      case 'Blue':
-        orientation = 3; // LEFT
-        break;
+    const playerIndex = sortedPlayers.findIndex(p => p.id === playerId)
+    
+    // Map player index to orientation based on game mode
+    if (gameMode === '1v1' || sortedPlayers.length === 2) {
+      return playerIndex === 0 ? 2 : 0; // BOTTOM : TOP
+    } else if (gameMode === '1v1v1' || sortedPlayers.length === 3) {
+      const orientations = [2, 0, 1]; // BOTTOM, TOP, RIGHT
+      return orientations[playerIndex] || 2;
+    } else if (gameMode === '1v1v1v1' || sortedPlayers.length === 4) {
+      const orientations = [2, 0, 1, 3]; // BOTTOM, TOP, RIGHT, LEFT
+      return orientations[playerIndex] || 2;
     }
-
-
-    return orientation
+    
+    return 2; // Default BOTTOM
   }
 
   const renderBoard = () => {
@@ -426,6 +497,41 @@ function GamePage() {
               <div className="timer-display">{formatTime(gameTime)}</div>
             )}
           </div>
+          
+          {/* Material Count Display */}
+          {Object.keys(materialCount).length > 0 && (
+            <div className="material-count-section">
+              <h4 className="material-title">Material Score</h4>
+              <div className="material-counts">
+                {Object.entries(materialCount).map(([team, count]) => {
+                  const teamName = getTeamName(parseInt(team))
+                  const materialScore = calculateMaterialScore(count.pieces)
+                  return (
+                    <div key={team} className="material-team">
+                      <div className="team-score">
+                        {teamName}: {materialScore} points
+                      </div>
+                      <div className="piece-breakdown">
+                        {Object.entries(count.pieces).map(([pieceType, pieceCount]) => {
+                          if (pieceCount > 0) {
+                            const pieceValue = getPieceValue(parseInt(pieceType))
+                            const totalValue = pieceValue * pieceCount
+                            return (
+                              <span key={pieceType} className="piece-count">
+                                {getPieceSymbol(parseInt(pieceType))}×{pieceCount} ({totalValue})
+                              </span>
+                            )
+                          }
+                          return null
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          
           <div className="game-controls">
             <Button
               variant="secondary"
