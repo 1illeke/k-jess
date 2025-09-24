@@ -37,6 +37,7 @@ function GamePage() {
       color: player.color || 'White' // Use server-assigned color or default
     }));
   })
+  const [playerOrientation, setPlayerOrientation] = useState(null) // Store server-provided orientation
   const chatMessagesRef = useRef(null)
 
   // Get stable player ID (unique per tab)
@@ -168,6 +169,10 @@ function GamePage() {
         const currentCode = gameId ? gameId : 'default'
         if (gameState && gameState.status && gameState.status.materialCount) {
           setMaterialCount(gameState.status.materialCount)
+        }
+        // Store server-provided player orientation
+        if (gameState && gameState.playerOrientation !== undefined) {
+          setPlayerOrientation(gameState.playerOrientation)
         }
       }
     })
@@ -374,8 +379,14 @@ function GamePage() {
     return total
   }
 
-  // Get player orientation based on their position in the lobby
+  // Get player orientation - use server-provided orientation when available
   const getPlayerOrientation = () => {
+    // Use server-provided orientation if available
+    if (playerOrientation !== null) {
+      return playerOrientation
+    }
+    
+    // Fallback to local calculation (should not be needed in normal operation)
     const playerId = getPlayerId()
     const myPlayer = gamePlayers.find(p => p.id === playerId)
     

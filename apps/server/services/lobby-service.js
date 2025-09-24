@@ -243,17 +243,42 @@ export class LobbyService {
     if (!lobby) return null;
 
     const host = lobby.players.get(lobby.hostId);
-    const colors = ['White', 'Black', 'Red', 'Blue'];
     
     // Sort players by join time to assign colors in order
     const sortedPlayers = Array.from(lobby.players.values()).sort((a, b) => a.joinedAt - b.joinedAt);
     
-    const players = sortedPlayers.map((player, index) => ({
-      playerId: player.playerId,
-      name: player.name,
-      connected: player.connected,
-      color: colors[index % colors.length]
-    }));
+    const players = sortedPlayers.map((player, index) => {
+      // Assign colors based on the same logic as orientations in server.js
+      // Use a stable assignment that doesn't change when new players join
+      let color;
+      
+      // Always assign colors based on join order, regardless of current player count
+      // This ensures colors don't shift when new players join
+      if (index === 0) {
+        // First player (host) always gets White (BOTTOM orientation)
+        color = 'White';
+      } else if (index === 1) {
+        // Second player always gets Black (TOP orientation)
+        color = 'Black';
+      } else if (index === 2) {
+        // Third player always gets Red (RIGHT orientation)
+        color = 'Red';
+      } else if (index === 3) {
+        // Fourth player always gets Blue (LEFT orientation)
+        color = 'Blue';
+      } else {
+        // Fallback for more than 4 players (shouldn't happen with current max)
+        const colors = ['White', 'Black', 'Red', 'Blue'];
+        color = colors[index % colors.length];
+      }
+      
+      return {
+        playerId: player.playerId,
+        name: player.name,
+        connected: player.connected,
+        color: color
+      };
+    });
 
     return {
       code: lobby.code,

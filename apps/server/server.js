@@ -946,21 +946,16 @@ function getPlayerOrientation(lobby, player) {
   
   const playerIndex = players.findIndex(p => p.playerId === player.playerId);
   
-  // For 2-player games: first player is BOTTOM, second is TOP
-  if (players.length === 2) {
-    return playerIndex === 0 ? 2 : 0; // BOTTOM : TOP
-  }
-  
-  // For 3-player games: White=BOTTOM, Black=TOP, Red=RIGHT (no LEFT)
-  if (players.length === 3) {
-    const orientations = [2, 0, 1]; // BOTTOM, TOP, RIGHT (matches White, Black, Red)
-    return orientations[playerIndex] || 2; // Default to BOTTOM
-  }
-  
-  // For 4-player games: White=BOTTOM, Black=TOP, Red=RIGHT, Blue=LEFT
-  if (players.length === 4) {
-    const orientations = [2, 0, 1, 3]; // BOTTOM, TOP, RIGHT, LEFT (matches White, Black, Red, Blue)
-    return orientations[playerIndex] || 2; // Default to BOTTOM
+  // Use stable orientation assignment based on join order
+  // This matches the color assignment in lobby service
+  if (playerIndex === 0) {
+    return 2; // First player (host) always gets BOTTOM (White)
+  } else if (playerIndex === 1) {
+    return 0; // Second player always gets TOP (Black)
+  } else if (playerIndex === 2) {
+    return 1; // Third player always gets RIGHT (Red)
+  } else if (playerIndex === 3) {
+    return 3; // Fourth player always gets LEFT (Blue)
   }
   
   return 2; // Default to BOTTOM
