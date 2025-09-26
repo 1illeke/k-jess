@@ -185,13 +185,10 @@ function GamePage() {
       }, (response) => {
         if (!response?.success) {
           console.error('Failed to join lobby:', response?.error);
-          // Navigate back to home if lobby doesn't exist
-          navigate('/', {
-            state: {
-              error: 'Lobby not found or expired',
-              playerName
-            }
-          });
+          // If the game/lobby no longer exists, show ended modal instead of hard navigating
+          setGameOverData({ reason: 'ended' });
+          setModalType('game_over');
+          setShowModal(true);
         }
       });
 
@@ -218,6 +215,13 @@ function GamePage() {
             color: player.color || 'White' // Use server-assigned color
           }));
           setGamePlayers(players);
+        }
+
+        // If lobby phase is ended, present ended modal
+        if (lobbyPublic?.phase === 'ended') {
+          setGameOverData({ reason: 'ended' });
+          setModalType('game_over');
+          setShowModal(true);
         }
 
         // Don't automatically start countdown here - let the lobby start event handle it
@@ -618,6 +622,7 @@ function GamePage() {
                   {gameOverData?.reason === 'stalemate' && 'by Stalemate'}
                   {gameOverData?.reason === 'insufficient_material' && 'by Insufficient Material'}
                   {gameOverData?.reason === 'only_one_team_remaining' && 'Last Player Standing'}
+                  {gameOverData?.reason === 'ended' && 'This game has ended'}
                 </p>
               </div>
             )}

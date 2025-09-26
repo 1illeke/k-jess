@@ -177,6 +177,55 @@ function broadcastOnlineCount() {
   io.emit('online-count-update', { onlineCount: count });
 }
 
+// Helper: finalize and cleanup a game/lobby when it ends
+function finalizeGameAndCleanup({ code, lobby, status }) {
+  try {
+    // Pause and remove timer
+    const timer = gameTimers.get(code);
+    if (timer && !timer.paused) {
+      timer.elapsed += Date.now() - timer.startTime;
+      timer.paused = true;
+      gameTimers.set(code, timer);
+    }
+    // Remove timer entirely after pause
+    gameTimers.delete(code);
+
+    // Mark lobby ended and timestamp
+    if (lobby) {
+      lobby.phase = 'ended';
+      lobby.endedAt = Date.now();
+    }
+
+    // Emit a final GAME_OVER to ensure clients react
+    if (status) {
+      io.to(`game:${code}`).emit(GAME_EVENTS.GAME_OVER, {
+        reason: status.gameOverReason,
+        winner: status.winner
+      });
+    }
+
+    // Clear chess engine resources
+    chessEngines.delete(code);
+
+    // Clear stored orientations for this game
+    playerOrientations.delete(code);
+
+    // Clear chat history
+    chatRooms.delete(code);
+
+    // Schedule lobby removal shortly after game over
+    setTimeout(() => {
+      // Safeguard: only remove if still ended
+      const l = lobbyService.getLobby(code);
+      if (l && l.phase === 'ended') {
+        lobbyService.endLobby({ code, byPlayerId: null, reason: 'Auto-cleanup after game over' });
+      }
+    }, 2000);
+  } catch (cleanupError) {
+    console.error('Error during finalizeGameAndCleanup:', cleanupError);
+  }
+}
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`);
@@ -280,7 +329,7 @@ io.on('connection', (socket) => {
         const playerPublic = {
           playerId: player.playerId,
           name: player.name,
-          connected: player.connected,
+          connected: false,
         };
         
         socket.to(code).emit(LOBBY_EVENTS.PLAYER_LEFT, { playerPublic });
@@ -784,26 +833,10 @@ io.on('connection', (socket) => {
           }
         }
         
-        // Emit game over event
+        // Emit game over event and cleanup
         if (status.gameOver) {
-          // Pause the timer when game ends
-          const timer = gameTimers.get(code);
-          if (timer && !timer.paused) {
-            timer.elapsed += Date.now() - timer.startTime;
-            timer.paused = true;
-            gameTimers.set(code, timer);
-            console.log(`Timer paused for game ${code} - game over: ${status.gameOverReason}`);
-          }
-          
-          // Set lobby phase to ended
-          lobby.phase = 'ended';
-          lobby.endedAt = Date.now();
-          console.log(`Game ${code} ended - lobby phase set to ended`);
-          
-          io.to(`game:${code}`).emit(GAME_EVENTS.GAME_OVER, {
-            reason: status.gameOverReason,
-            winner: status.winner
-          });
+          console.log(`Game ${code} ended - reason: ${status.gameOverReason}`);
+          finalizeGameAndCleanup({ code, lobby, status });
         }
       }
 
@@ -941,26 +974,10 @@ io.on('connection', (socket) => {
           }
         }
         
-        // Emit game over event
+        // Emit game over event and cleanup
         if (status.gameOver) {
-          // Pause the timer when game ends
-          const timer = gameTimers.get(code);
-          if (timer && !timer.paused) {
-            timer.elapsed += Date.now() - timer.startTime;
-            timer.paused = true;
-            gameTimers.set(code, timer);
-            console.log(`Timer paused for game ${code} - game over: ${status.gameOverReason}`);
-          }
-          
-          // Set lobby phase to ended
-          lobby.phase = 'ended';
-          lobby.endedAt = Date.now();
-          console.log(`Game ${code} ended - lobby phase set to ended`);
-          
-          io.to(`game:${code}`).emit(GAME_EVENTS.GAME_OVER, {
-            reason: status.gameOverReason,
-            winner: status.winner
-          });
+          console.log(`Game ${code} ended - reason: ${status.gameOverReason}`);
+          finalizeGameAndCleanup({ code, lobby, status });
         }
       }
 
@@ -1019,6 +1036,13 @@ io.on('connection', (socket) => {
       const { code } = data || {};
       if (!code) return;
 
+      // Do not start timer for ended games
+      const lobby = lobbyService.getLobby(code);
+      if (lobby && lobby.phase === 'ended') {
+        console.log(`Ignoring timer start for ended game ${code}`);
+        return;
+      }
+
       const existingTimer = gameTimers.get(code);
       
       // Only start timer if it doesn't exist or is paused
@@ -1073,6 +1097,13 @@ io.on('connection', (socket) => {
     try {
       const { code } = data || {};
       if (!code) return;
+
+      // Do not reset timer for ended games
+      const lobby = lobbyService.getLobby(code);
+      if (lobby && lobby.phase === 'ended') {
+        console.log(`Ignoring timer reset for ended game ${code}`);
+        return;
+      }
 
       gameTimers.set(code, { elapsed: 0, paused: true, startTime: Date.now() });
       console.log(`Timer reset for ${code}`);
