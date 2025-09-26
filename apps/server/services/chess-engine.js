@@ -723,6 +723,10 @@ export class ChessEngine {
     if (materialCheck.insufficient) {
       status.gameOver = true
       status.gameOverReason = materialCheck.reason
+      if (materialCheck.reason === 'only_one_team_remaining') {
+        const activeTeams = [...new Set(this.pieces.filter(p => !p.dead).map(p => p.team))]
+        status.winner = activeTeams
+      }
       return status
     }
     
@@ -817,8 +821,6 @@ export class ChessEngine {
   getGameStateForPlayer(playerOrientation) {
     const baseState = this.getGameState()
     
-    // For now, just return the pieces as they are
-    // Note: Mirroring will be implemented when needed for multi-player support
     return {
       ...baseState,
       pieces: baseState.pieces,
