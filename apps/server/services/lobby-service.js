@@ -257,8 +257,8 @@ export class LobbyService {
         switch (orientation) {
           case 2: color = 'White'; break;  // BOTTOM
           case 0: color = 'Black'; break;  // TOP
-          case 1: color = 'Red'; break;    // RIGHT
-          case 3: color = 'Blue'; break;   // LEFT
+          case 1: color = 'Orange'; break; // RIGHT
+          case 3: color = 'Red'; break;    // LEFT
           default: color = 'White'; break;
         }
       } else {
@@ -270,14 +270,14 @@ export class LobbyService {
           // Second player always gets Black (TOP orientation)
           color = 'Black';
         } else if (index === 2) {
-          // Third player always gets Red (RIGHT orientation)
-          color = 'Red';
+          // Third player always gets Orange (RIGHT orientation)
+          color = 'Orange';
         } else if (index === 3) {
-          // Fourth player always gets Blue (LEFT orientation)
-          color = 'Blue';
+          // Fourth player always gets Red (LEFT orientation)
+          color = 'Red';
         } else {
           // Fallback for more than 4 players (shouldn't happen with current max)
-          const colors = ['White', 'Black', 'Red', 'Blue'];
+          const colors = ['White', 'Black', 'Orange', 'Red'];
           color = colors[index % colors.length];
         }
       }
