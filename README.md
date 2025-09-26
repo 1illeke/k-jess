@@ -43,11 +43,6 @@ An online real‑time multiplayer game built with React (Vite) and Node.js (Expr
 
 This is a Multiplayer Real‑Time Strategy (MP‑RTS) chess game where speed and strategy collide. Unlike traditional turn‑based chess, K/Jess allows all players to move simultaneously. Pieces follow normal chess rules but actions are gated by cooldowns, rewarding fast thinking and precise execution. Play with 2–4 players in chaotic real‑time battles.
 
-Modes:
-- 2 Player: Classic board with simultaneous movement and cooldowns for intense 1v1 duels.
-- 3 Player: Tri-board variant; pawns advance straight, creating two attack fronts to manage.
-- 4 Player: Cross‑shaped board; multi‑front combat with a contested center.
-
 ## Tech Stack
 
 - React 19 + Vite

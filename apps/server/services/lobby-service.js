@@ -194,12 +194,24 @@ export class LobbyService {
     }
 
     const connectedPlayers = Array.from(lobby.players.values()).filter(p => p.connected);
-    if (connectedPlayers.length < 2) {
-      throw new Error('Need at least 2 players to start');
+    
+    // Validate player count based on game mode
+    const requiredPlayers = this.getRequiredPlayersForMode(lobby.settings.mode);
+    if (connectedPlayers.length < requiredPlayers) {
+      throw new Error(`Need at least ${requiredPlayers} players to start a ${lobby.settings.mode} game`);
     }
 
     lobby.phase = 'in_game';
     lobby.startedAt = Date.now();
+  }
+
+  getRequiredPlayersForMode(mode) {
+    switch (mode) {
+      case '1v1': return 2;
+      case '1v1v1': return 3;
+      case '1v1v1v1': return 4;
+      default: return 2;
+    }
   }
 
   endLobby({ code, byPlayerId, reason }) {
@@ -222,25 +234,61 @@ export class LobbyService {
     // Clean up after a delay
     setTimeout(() => {
       this.lobbies.delete(code);
+      // Note: playerOrientations cleanup should be handled by the main server
     }, 30000); // 30 seconds
   }
 
-  getPublicView(code) {
+  getPublicView(code, playerOrientations = null) {
     const lobby = this.getLobby(code);
     if (!lobby) return null;
 
     const host = lobby.players.get(lobby.hostId);
-    const colors = ['White', 'Black', 'Red', 'Blue'];
     
     // Sort players by join time to assign colors in order
     const sortedPlayers = Array.from(lobby.players.values()).sort((a, b) => a.joinedAt - b.joinedAt);
     
-    const players = sortedPlayers.map((player, index) => ({
-      playerId: player.playerId,
-      name: player.name,
-      connected: player.connected,
-      color: colors[index % colors.length]
-    }));
+    const players = sortedPlayers.map((player, index) => {
+      let color;
+      
+      // If game has started and we have stored orientations, use them
+      if (lobby.phase === 'in_game' && playerOrientations && playerOrientations.has(player.playerId)) {
+        const orientation = playerOrientations.get(player.playerId);
+        // Map orientation to color (same as server.js logic)
+        switch (orientation) {
+          case 2: color = 'White'; break;  // BOTTOM
+          case 0: color = 'Black'; break;  // TOP
+          case 1: color = 'Orange'; break; // RIGHT
+          case 3: color = 'Red'; break;    // LEFT
+          default: color = 'White'; break;
+        }
+      } else {
+        // For lobby phase or if no stored orientations, assign based on join order
+        if (index === 0) {
+          // First player (host) always gets White (BOTTOM orientation)
+          color = 'White';
+        } else if (index === 1) {
+          // Second player always gets Black (TOP orientation)
+          color = 'Black';
+        } else if (index === 2) {
+          // Third player always gets Orange (RIGHT orientation)
+          color = 'Orange';
+        } else if (index === 3) {
+          // Fourth player always gets Red (LEFT orientation)
+          color = 'Red';
+        } else {
+          // Fallback for more than 4 players (shouldn't happen with current max)
+          const colors = ['White', 'Black', 'Orange', 'Red'];
+          color = colors[index % colors.length];
+        }
+      }
+      
+      return {
+        playerId: player.playerId,
+        name: player.name,
+        connected: player.connected,
+        color: color
+      };
+    });
 
     return {
       code: lobby.code,
@@ -270,5 +318,10 @@ export class LobbyService {
         lobby.cleanupTimer = null;
       }
     }
+  }
+
+  // Get all active lobby codes for cleanup
+  getActiveCodes() {
+    return Array.from(this.lobbies.keys());
   }
 }

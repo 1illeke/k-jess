@@ -323,7 +323,7 @@ export class KISSEngine {
     }
   }
 
-  makeMove(fromSquare, toSquare, playerOrientation) {
+  makeMove(fromSquare, toSquare, playerOrientation, promotionPiece = null) {
     
     const validation = this.isValidMove(fromSquare, toSquare, playerOrientation)
     
@@ -380,8 +380,11 @@ export class KISSEngine {
     if (piece.type === Piece.PAWN) {
       const [x, y] = this.squareToCoords(toSquare)
       if (this.isPawnPromotionSquare(x, y, piece.team)) {
-        piece.type = Piece.QUEEN
-        piece.cooldown = Date.now() + cooldownTimes[Piece.QUEEN]
+        // Use provided promotion piece or default to Queen
+        const promotionType = promotionPiece !== null ? promotionPiece : Piece.QUEEN
+        piece.type = promotionType
+        piece.cooldown = Date.now() + cooldownTimes[promotionType]
+        console.log(`Pawn promoted to ${promotionType} for team ${piece.team} at position (${toSquare})`);
       }
     }
 
@@ -745,7 +748,8 @@ export class KISSEngine {
       winner: null,
       loser: null,
       gameOver: false,
-      gameOverReason: null
+      gameOverReason: null,
+      materialCount: this.getMaterialCount()
     }
     
     // Check insufficient material first
@@ -781,6 +785,46 @@ export class KISSEngine {
     }
     
     return status
+  }
+
+  getMaterialCount() {
+    const materialCount = {}
+    
+    // Initialize material count for each active team
+    for (const team of this.activePlayers) {
+      materialCount[team] = {
+        total: 0,
+        pieces: {
+          [Piece.KING]: 0,
+          [Piece.QUEEN]: 0,
+          [Piece.ROOK]: 0,
+          [Piece.BISHOP]: 0,
+          [Piece.KNIGHT]: 0,
+          [Piece.PAWN]: 0
+        }
+      }
+    }
+    
+    // Count pieces for each team
+    for (const piece of this.pieces) {
+      if (!piece.dead && this.activePlayers.includes(piece.team)) {
+        materialCount[piece.team].total++
+        materialCount[piece.team].pieces[piece.type]++
+      }
+    }
+    
+    return materialCount
+  }
+
+  // Check if a move requires pawn promotion
+  requiresPromotion(fromSquare, toSquare, playerOrientation) {
+    const piece = this.getPieceAt(fromSquare)
+    if (!piece || piece.type !== Piece.PAWN || piece.team !== playerOrientation) {
+      return false
+    }
+    
+    const [x, y] = this.squareToCoords(toSquare)
+    return this.isPawnPromotionSquare(x, y, piece.team)
   }
 
   getGameState() {
