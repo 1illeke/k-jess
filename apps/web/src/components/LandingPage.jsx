@@ -109,6 +109,15 @@ function LandingPage() {
       case 'Changelog':
         return (
           <div>
+                        <h4>Version 0.1.29</h4>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added press enter to focuse chat and j/k/l for play/pause next and previous track.</li>
+              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added improved promotion</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Fixed incorrect winner and looser states.</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Refreshing in the lobby keeps the original host, going back to an ended game now says "draw" and makes you go back.</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Refreshing should no longer give you controll over enemy pieces</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Various fixes</li>
+            </ul>
             <h4>Version 0.1.28</h4>
             <ul style={{ listStyle: 'none', padding: 0 }}>
               <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added scoring system</li>
@@ -128,11 +137,6 @@ function LandingPage() {
               <li style={{ color: '#666666', marginBottom: '8px' }}>* Fixed black screen issues</li>
               <li style={{ color: '#666666', marginBottom: '8px' }}>* Fixed black not promoting</li>
               <li style={{ color: '#666666', marginBottom: '8px' }}>* Some 4 player issues remain</li>
-              <li style={{ color: '#666666', marginBottom: '8px' }}>* Various fixes</li>
-            </ul>
-            <h4>Version 0.1.20</h4>
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added SFX for movment</li>
               <li style={{ color: '#666666', marginBottom: '8px' }}>* Various fixes</li>
             </ul>
           </div>
