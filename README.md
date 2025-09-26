@@ -178,3 +178,71 @@ Workspace specific
 npm run dev --workspace=apps/web
 npm run start --workspace=apps/server
 ```
+
+---
+
+## Gameplay overview
+
+- Real-time chess with cooldowns instead of turns
+- Supports 2, 3, and 4 players
+- Colors/orientations are stable across reconnects and refreshes
+- Host remains the host across refresh; host can start/end the game
+
+### Controls
+
+- Mouse: click a piece to select; click a highlighted square to move
+- Enter (global):
+  - If the chat is not focused: focuses the chat input
+  - If the chat is focused: sends the message
+- Music controls (global):
+  - J: previous track
+  - K: play/pause
+  - L: next track
+- In-UI buttons: Pause, Quit, Feedback, Mute
+
+### Lobby and reconnect behavior
+
+- Player identity is stable per browser tab via `sessionStorage` (`playerId`)
+- Quick reconnect: if you disconnect and reconnect within 30s, the client re-joins automatically
+- Seat/orientation is preserved across reconnects and refreshes
+- Host is preserved by `hostPlayerId`; refreshing does not reshuffle host
+- If a game ends (checkmate, stalemate, insufficient material, or only one team remains):
+  - The server stops and deletes the game timer
+  - The server cleans up the engine and chat for that lobby
+  - Re-entering the ended game shows “This game has ended” with a Back Home button
+
+### Server endpoints (dev / admin)
+
+- Health check: `GET /health`
+- Online count: `GET /api/online-count`
+- Admin – list lobbies: `GET /api/admin/lobbies`
+- Admin – terminate lobby: `DELETE /api/admin/lobbies/:code`
+
+### Networking and security notes
+
+- All move validations run on the server
+- Server derives a player’s orientation from the stored mapping; client-sent orientation is ignored
+- Moves/promotion are only applied for the player’s assigned seat
+
+### Troubleshooting
+
+- Can’t join a lobby from the same browser window with two tabs:
+  - Use different browsers or an incognito/private window per player
+- Reconnect didn’t work after a long break:
+  - Auto-rejoin only attempts for ~30 seconds after disconnect
+- Timer didn’t stop on game end:
+  - The server now force-stops timers and cleans up on game over; restart both processes if you’re on an older build
+
+### Dev tips
+
+- Use `start-dev.bat` to run both services on Windows (optional)
+- Update CORS origins in `apps/server/.env` if testing from a different dev URL
+
+### Project notes
+
+- Rendering uses DOM elements for portability; no canvas/WebGL
+- The 3- and 4-player boards use a cross layout on a 14×14 grid
+- Engines:
+  - `ChessEngine` for 1v1
+  - `KISSEngine` for 3/4 players
+- Game over signaling includes both `winner` (array) and `loser` (single orientation) so clients can reliably display win/loss
