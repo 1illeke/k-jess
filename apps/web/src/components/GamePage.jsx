@@ -6,6 +6,7 @@ import { gameSocket, chatSocket, timerSocket } from '../sockets'
 import socket from '../sockets/socket.js'
 import { LOBBY_EVENTS } from '../../constants/socket-events.js'
 import { useSound } from '../contexts/SoundContext'
+import { useMusic } from '../contexts/MusicContext.jsx'
 
 function GamePage() {
   const location = useLocation()
@@ -16,6 +17,7 @@ function GamePage() {
   const lobbyPublic = location.state?.lobbyPublic || location.state?.lobbyPlayers || []
   const gameSettings = location.state?.gameSettings || {}
   const { isMuted, actions: soundActions } = useSound()
+  const music = useMusic()
 
 
   const [gameTime, setGameTime] = useState(0)
@@ -39,6 +41,7 @@ function GamePage() {
   })
   const [playerOrientation, setPlayerOrientation] = useState(null) // Store server-provided orientation
   const chatMessagesRef = useRef(null)
+  const chatInputRef = useRef(null)
 
   // Get stable player ID (unique per tab)
   const getPlayerId = () => {
@@ -258,6 +261,43 @@ function GamePage() {
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight
     }
   }, [chatMessages])
+
+  // Global hotkeys: Enter to focus/send chat, J/K/L for music prev/play/next
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      // Ignore when focused on inputs/textareas to not interfere with typing
+      const tag = (e.target && e.target.tagName) || ''
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA'
+
+      // Chat Enter: focus or submit
+      if (e.key === 'Enter') {
+        if (document.activeElement === chatInputRef.current) {
+          // Submit message
+          e.preventDefault()
+          if (newMessage.trim()) {
+            handleSendMessage({ preventDefault: () => {} })
+          }
+        } else if (!isTyping) {
+          e.preventDefault()
+          chatInputRef.current?.focus()
+        }
+        return
+      }
+
+      // Music controls (J/K/L) when not typing in an input
+      if (!isTyping) {
+        if (e.key === 'j' || e.key === 'J') {
+          music?.actions?.previousTrack?.()
+        } else if (e.key === 'k' || e.key === 'K') {
+          music?.actions?.togglePlay?.()
+        } else if (e.key === 'l' || e.key === 'L') {
+          music?.actions?.nextTrack?.()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [newMessage, music])
 
   const handlePause = () => {
     if (!isPaused) {
@@ -515,6 +555,7 @@ function GamePage() {
                 placeholder="Type message..."
                 className="chat-input"
                 maxLength={100}
+                ref={chatInputRef}
               />
             </form>
           </div>
