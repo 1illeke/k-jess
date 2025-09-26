@@ -16,89 +16,79 @@ export const Piece = {
 
 export let filenames = []
 filenames[Orientation.TOP] = [
-	"/pieces/top_king.png",
-	"/pieces/top_queen.png",
-	"/pieces/top_rook.png",
-	"/pieces/top_bishop.png",
-	"/pieces/top_knight.png",
-	"/pieces/top_pawn.png",
+	"/pieces/top_king.svg",
+	"/pieces/top_queen.svg",
+	"/pieces/top_rook.svg",
+	"/pieces/top_bishop.svg",
+	"/pieces/top_knight.svg",
+	"/pieces/top_pawn.svg",
 ]
 
 filenames[Orientation.RIGHT] = [
-	"/pieces/right_king.png",
-	"/pieces/right_queen.png",
-	"/pieces/right_rook.png",
-	"/pieces/right_bishop.png",
-	"/pieces/right_knight.png",
-	"/pieces/right_pawn.png",
+	"/pieces/right_king.svg",
+	"/pieces/right_queen.svg",
+	"/pieces/right_rook.svg",
+	"/pieces/right_bishop.svg",
+	"/pieces/right_knight.svg",
+	"/pieces/right_pawn.svg",
 ]
 
 filenames[Orientation.BOTTOM] = [
-	"/pieces/bottom_king.png",
-	"/pieces/bottom_queen.png",
-	"/pieces/bottom_rook.png",
-	"/pieces/bottom_bishop.png",
-	"/pieces/bottom_knight.png",
-	"/pieces/bottom_pawn.png",
+	"/pieces/bottom_king.svg",
+	"/pieces/bottom_queen.svg",
+	"/pieces/bottom_rook.svg",
+	"/pieces/bottom_bishop.svg",
+	"/pieces/bottom_knight.svg",
+	"/pieces/bottom_pawn.svg",
 ]
 
 filenames[Orientation.LEFT] = [
-	"/pieces/left_king.png",
-	"/pieces/left_queen.png",
-	"/pieces/left_rook.png",
-	"/pieces/left_bishop.png",
-	"/pieces/left_knight.png",
-	"/pieces/left_pawn.png",
+	"/pieces/left_king.svg",
+	"/pieces/left_queen.svg",
+	"/pieces/left_rook.svg",
+	"/pieces/left_bishop.svg",
+	"/pieces/left_knight.svg",
+	"/pieces/left_pawn.svg",
 ]
 export function getSquare(orientation, [x, y], largeBoard) {
+	if (orientation === Orientation.LEFT || 
+		orientation === Orientation.RIGHT && !largeBoard) {
+		console.error('unreachable')
+	}
+
+	let files, ranks
 	if (largeBoard) {
-		const files = "abcdefghijklmn"
-		const ranks = [1,2,3,4,5,6,7,8,9,10,11,12,13,14]
-		switch (orientation) {
-			case Orientation.TOP:
-				return `${
-					files[files.length-x-1]
-				}${
-					ranks[y]
-				}`
-			case Orientation.RIGHT:
-				return `${
-					files[files.length-y-1]
-				}${
-					ranks[ranks.length-x-1]
-				}`
-			case Orientation.BOTTOM:
-				return `${
-					files[x]
-				}${
-					ranks[ranks.length-y-1]
-				}`
-			case Orientation.LEFT:
-				return `${
-					files[y]
-				}${
-					ranks[x]
-				}`
-		}
+		files = "abcdefghijklmn"
+		ranks = [1,2,3,4,5,6,7,8,9,10,11,12,13,14]
 	} else {
-		const files = "abcdefgh"
-		const ranks = [1,2,3,4,5,6,7,8]
-		switch (orientation) {
-			case Orientation.TOP:
-				return `${
-					files[files.length-x-1]
-				}${
-					ranks[y]
-				}`
-			case Orientation.BOTTOM:
-				return `${
-					files[x]
-				}${
-					ranks[ranks.length-y-1]
-				}`
-			default:
-				console.error("unreachable")
-		}
+		files = "abcdefgh"
+		ranks = [1,2,3,4,5,6,7,8]
+	}
+	switch (orientation) {
+		case Orientation.TOP:
+			return `${
+				files[files.length-x-1]
+			}${
+				ranks[y]
+			}`
+		case Orientation.RIGHT:
+			return `${
+				files[files.length-y-1]
+			}${
+				ranks[ranks.length-x-1]
+			}`
+		case Orientation.BOTTOM:
+			return `${
+				files[x]
+			}${
+				ranks[ranks.length-y-1]
+			}`
+		case Orientation.LEFT:
+			return `${
+				files[y]
+			}${
+				ranks[x]
+			}`
 	}
 	return null
 }
@@ -113,6 +103,12 @@ export function spawnPieces(orientation, largeBoard) {
 				[Piece.ROOK, Piece.KNIGHT, Piece.BISHOP, Piece.QUEEN, Piece.KING, Piece.BISHOP, Piece.KNIGHT, Piece.ROOK],
 				[Piece.PAWN, Piece.PAWN, Piece.PAWN, Piece.PAWN, Piece.PAWN, Piece.PAWN, Piece.PAWN, Piece.PAWN],
 			]
+
+			if (orientation === Orientation.LEFT || 
+				orientation === Orientation.RIGHT) {
+				// swap king and queen so all kings are connected diagonally
+				[start[0][3], start[0][4]] = [start[0][4], start[0][3]]
+			}
 
 			piece.team = orientation
 			piece.type = start[y][x]

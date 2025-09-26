@@ -291,7 +291,7 @@ export class ChessEngine {
   }
 
   // Execute a move
-  makeMove(fromSquare, toSquare, playerOrientation) {
+  makeMove(fromSquare, toSquare, playerOrientation, promotionPiece = null) {
     console.log('=== CHESS ENGINE MOVE DEBUG ===');
     console.log('Move:', { fromSquare, toSquare, playerOrientation });
     
@@ -353,10 +353,14 @@ export class ChessEngine {
     // Check for pawn promotion
     if (piece.type === Piece.PAWN) {
       const [, y] = this.getSquarePosition(toSquare)
-      if (y <= this.boardSize - 8) {
-        piece.type = Piece.QUEEN
+      if ((piece.team === Orientation.BOTTOM && y === 0) || 
+          (piece.team === Orientation.TOP && y === 7)) {
+        // Use provided promotion piece or default to Queen
+        const promotionType = promotionPiece !== null ? promotionPiece : Piece.QUEEN
+        piece.type = promotionType
         // Update cooldown for promoted piece
-        piece.cooldown = Date.now() + cooldownTimes[Piece.QUEEN]
+        piece.cooldown = Date.now() + cooldownTimes[promotionType]
+        console.log(`Pawn promoted to ${promotionType} for team ${piece.team} at position (${toSquare})`);
       }
     }
 
@@ -710,7 +714,8 @@ export class ChessEngine {
       winner: null,
       loser: null,
       gameOver: false,
-      gameOverReason: null
+      gameOverReason: null,
+      materialCount: this.getMaterialCount()
     }
     
     // Check insufficient material first
@@ -752,6 +757,47 @@ export class ChessEngine {
     }
     
     return status
+  }
+
+  getMaterialCount() {
+    const materialCount = {}
+    
+    // Initialize material count for both teams
+    for (const team of [Orientation.TOP, Orientation.BOTTOM]) {
+      materialCount[team] = {
+        total: 0,
+        pieces: {
+          [Piece.KING]: 0,
+          [Piece.QUEEN]: 0,
+          [Piece.ROOK]: 0,
+          [Piece.BISHOP]: 0,
+          [Piece.KNIGHT]: 0,
+          [Piece.PAWN]: 0
+        }
+      }
+    }
+    
+    // Count pieces for each team
+    for (const piece of this.pieces) {
+      if (!piece.dead && (piece.team === Orientation.TOP || piece.team === Orientation.BOTTOM)) {
+        materialCount[piece.team].total++
+        materialCount[piece.team].pieces[piece.type]++
+      }
+    }
+    
+    return materialCount
+  }
+
+  // Check if a move requires pawn promotion
+  requiresPromotion(fromSquare, toSquare, playerOrientation) {
+    const piece = this.getPieceAt(fromSquare)
+    if (!piece || piece.type !== Piece.PAWN || piece.team !== playerOrientation) {
+      return false
+    }
+    
+    const [, y] = this.getSquarePosition(toSquare)
+    return (piece.team === Orientation.BOTTOM && y === 0) || 
+           (piece.team === Orientation.TOP && y === 7)
   }
 
   // Get current game state

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import './2player.css'
 import * as chess from '../../../chess.js'
-import { makeMove, listenGame } from '../../../sockets/game.js'
+import { makeMove, makePromotionMove, listenGame } from '../../../sockets/game.js'
 import { useSound } from '../../../contexts/SoundContext'
+import PromotionModal from '../PromotionModal.jsx'
 
 
 const DURATION = 3000.0
@@ -43,6 +44,7 @@ export default function TwoPlayerBoard({
 	}
 
 	const [pieces, setPieces] = useState([])
+	const [promotionData, setPromotionData] = useState(null) // { from, to, playerTeam }
 
 	const piece_lookup = {}
 	for (const piece of pieces) {
@@ -416,6 +418,15 @@ export default function TwoPlayerBoard({
 							// Play sound for successful move
 							soundActions.playMoveSound()
 						},
+						onPromotionRequired: (data) => {
+							console.log('Promotion required:', data)
+							// Show promotion modal
+							setPromotionData({
+								from: data.from,
+								to: data.to,
+								playerTeam: selected.team
+							})
+						},
 						onError: (error) => {
 							console.error('Move failed:', error)
 							// Could show error message to user
@@ -453,5 +464,43 @@ export default function TwoPlayerBoard({
 				}}
 			/>
 		})}
+
+		{/* Promotion Modal */}
+		{promotionData && (
+			<PromotionModal
+				isOpen={!!promotionData}
+				onClose={() => setPromotionData(null)}
+				onSelect={(promotionPiece) => {
+					console.log('2player board: Promotion piece selected:', promotionPiece)
+					console.log('2player board: Promotion data:', promotionData)
+					console.log('2player board: Game code:', gameCode)
+					console.log('2player board: Player orientation:', playerOrientation)
+					// Send promotion move to backend
+					if (gameCode) {
+						console.log('2player board: Sending promotion move to backend...')
+						makePromotionMove({
+							code: gameCode,
+							from: promotionData.from,
+							to: promotionData.to,
+							promotionPiece: promotionPiece,
+							playerOrientation: playerOrientation
+						}, {
+							onMoveMade: (response) => {
+								console.log('2player board: Promotion move successful:', response)
+								soundActions.playMoveSound()
+								setPromotionData(null)
+							},
+							onError: (error) => {
+								console.error('2player board: Promotion move failed:', error)
+								setPromotionData(null)
+							}
+						})
+					} else {
+						console.log('2player board: No game code, cannot send promotion move')
+					}
+				}}
+				playerTeam={promotionData.playerTeam}
+			/>
+		)}
 	</div>
 }

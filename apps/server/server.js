@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import { LOBBY_EVENTS, GAME_EVENTS, CHAT_EVENTS, TIMER_EVENTS } from './constants/socket-events.js';
 import { LobbyService } from './services/lobby-service.js';
-import { ChessEngine } from './services/chess-engine.js';
+import { ChessEngine, Piece } from './services/chess-engine.js';
 import { KISSEngine } from './services/kiss-engine.js';
 
 const app = express();
@@ -342,12 +342,28 @@ io.on('connection', (socket) => {
       
       emitLobbyState(io, code);
       
-      // Also emit to game room and initialize timer
+      // Only emit game start events for actual new games
       io.to(`game:${code}`).emit(GAME_EVENTS.STARTED, { code });
-      gameTimers.set(code, { elapsed: 0, paused: true, startTime: Date.now() });
+      
+      // Initialize timer for new games - start immediately
+      if (!gameTimers.has(code)) {
+        gameTimers.set(code, { elapsed: 0, paused: false, startTime: Date.now() });
+        console.log(`Timer initialized and started for new game ${code}`);
+      } else {
+        console.log(`Timer already exists for game ${code}, preserving existing timer`);
+      }
+      
+      // Store player orientations for this game to preserve them on reconnection
+      const orientations = new Map();
+      const connectedPlayers = Array.from(lobby.players.values()).filter(p => p.connected);
+      for (const player of connectedPlayers) {
+        const orientation = getPlayerOrientation(lobby, player);
+        orientations.set(player.playerId, orientation);
+        console.log(`Stored orientation for player ${player.name} (${player.playerId}): ${orientation}`);
+      }
+      playerOrientations.set(code, orientations);
       
       // Initialize appropriate chess engine based on game mode setting
-      const connectedPlayers = Array.from(lobby.players.values()).filter(p => p.connected);
       let chessEngine;
       
       // Use game mode setting to determine engine, not player count
@@ -441,8 +457,38 @@ io.on('connection', (socket) => {
 
       socket.join(`game:${code}`);
       
+      // If game has ended, send game over state
+      if (lobby.phase === 'ended') {
+        const chessEngine = chessEngines.get(code);
+        if (chessEngine) {
+          // Get player's orientation from lobby
+          const player = lobby.players.get(socket.id);
+          const playerOrientation = getPlayerOrientation(lobby, player);
+          
+          // Send current game state for this player (ended state)
+          const gameState = chessEngine.getGameStateForPlayer(playerOrientation);
+          socket.emit(GAME_EVENTS.GAME_STATE, gameState);
+          
+          // Send game over event
+          const gameStatus = chessEngine.getGameStatus();
+          if (gameStatus.gameOver) {
+            socket.emit(GAME_EVENTS.GAME_OVER, {
+              reason: gameStatus.gameOverReason,
+              winner: gameStatus.winner
+            });
+          }
+          
+          // Send final timer state
+          const timer = gameTimers.get(code);
+          if (timer) {
+            const currentElapsed = Math.floor(timer.elapsed / 1000);
+            socket.emit(TIMER_EVENTS.UPDATE, { code, elapsed: currentElapsed });
+            console.log(`Sent final timer state to player in ended game: ${currentElapsed}s elapsed`);
+          }
+        }
+      }
       // If game is already started, send current game state to the joining player
-      if (lobby.phase === 'in_game') {
+      else if (lobby.phase === 'in_game') {
         const chessEngine = chessEngines.get(code);
         if (chessEngine) {
           // Get player's orientation from lobby
@@ -452,6 +498,54 @@ io.on('connection', (socket) => {
           // Send current game state for this player
           const gameState = chessEngine.getGameStateForPlayer(playerOrientation);
           socket.emit(GAME_EVENTS.GAME_STATE, gameState);
+          
+          // Also send current timer state
+          const timer = gameTimers.get(code);
+          if (timer) {
+            let currentElapsed;
+            if (timer.paused) {
+              // Timer is paused (game ended), send the final elapsed time
+              currentElapsed = Math.floor(timer.elapsed / 1000);
+            } else {
+              // Timer is running, calculate current time
+              currentElapsed = Math.floor((timer.elapsed + (Date.now() - timer.startTime)) / 1000);
+            }
+            socket.emit(TIMER_EVENTS.UPDATE, { code, elapsed: currentElapsed });
+            console.log(`Sent timer sync to rejoining player: ${currentElapsed}s elapsed (paused: ${timer.paused})`);
+          }
+        } else {
+          // Game is in progress but no engine exists - recreate it
+          const connectedPlayers = Array.from(lobby.players.values()).filter(p => p.connected);
+          
+          // Use game mode setting to determine engine, not player count
+          if (lobby.settings.mode === '1v1') {
+            chessEngine = new ChessEngine(code, lobby.settings);
+          } else {
+            chessEngine = new KISSEngine(code, {...lobby.settings, maxPlayers: connectedPlayers.length});
+          }
+          
+          chessEngines.set(code, chessEngine);
+          
+          // Send initial game state for this player
+          const player = lobby.players.get(socket.id);
+          const playerOrientation = getPlayerOrientation(lobby, player);
+          const gameState = chessEngine.getGameStateForPlayer(playerOrientation);
+          socket.emit(GAME_EVENTS.GAME_STATE, gameState);
+          
+          // Also send current timer state
+          const timer = gameTimers.get(code);
+          if (timer) {
+            let currentElapsed;
+            if (timer.paused) {
+              // Timer is paused (game ended), send the final elapsed time
+              currentElapsed = Math.floor(timer.elapsed / 1000);
+            } else {
+              // Timer is running, calculate current time
+              currentElapsed = Math.floor((timer.elapsed + (Date.now() - timer.startTime)) / 1000);
+            }
+            socket.emit(TIMER_EVENTS.UPDATE, { code, elapsed: currentElapsed });
+            console.log(`Sent timer sync to rejoining player (recreated engine): ${currentElapsed}s elapsed (paused: ${timer.paused})`);
+          }
         }
       }
       
@@ -535,6 +629,16 @@ io.on('connection', (socket) => {
         if (!gameRoom || gameRoom.size === 0) {
           // No one left in game, reset lobby to lobby phase
           lobby.phase = 'lobby';
+          
+          // Pause the timer when game ends due to all players quitting
+          const timer = gameTimers.get(code);
+          if (timer && !timer.paused) {
+            timer.elapsed += Date.now() - timer.startTime;
+            timer.paused = true;
+            gameTimers.set(code, timer);
+            console.log(`Timer paused for game ${code} - all players quit`);
+          }
+          
           emitLobbyState(io, code);
         }
       }
@@ -567,6 +671,13 @@ io.on('connection', (socket) => {
         return;
       }
 
+      // Check if game has ended
+      if (lobby.phase === 'ended') {
+        console.log('Game has ended, cannot make moves');
+        if (ack) ack({ success: false, error: 'Game has ended' });
+        return;
+      }
+
       // Get or create chess engine for this game
       let chessEngine = chessEngines.get(code);
       if (!chessEngine) {
@@ -587,6 +698,19 @@ io.on('connection', (socket) => {
 
       console.log('Player orientation:', playerOrientation);
       console.log('Engine type:', chessEngine.constructor.name);
+
+      // Check if move requires promotion
+      if (chessEngine.requiresPromotion(from, to, playerOrientation)) {
+        console.log('Move requires promotion');
+        if (ack) ack({ 
+          success: false, 
+          error: 'Promotion required', 
+          requiresPromotion: true,
+          from,
+          to
+        });
+        return;
+      }
 
       // Make the move
       const result = chessEngine.makeMove(from, to, playerOrientation);
@@ -654,6 +778,20 @@ io.on('connection', (socket) => {
         
         // Emit game over event
         if (status.gameOver) {
+          // Pause the timer when game ends
+          const timer = gameTimers.get(code);
+          if (timer && !timer.paused) {
+            timer.elapsed += Date.now() - timer.startTime;
+            timer.paused = true;
+            gameTimers.set(code, timer);
+            console.log(`Timer paused for game ${code} - game over: ${status.gameOverReason}`);
+          }
+          
+          // Set lobby phase to ended
+          lobby.phase = 'ended';
+          lobby.endedAt = Date.now();
+          console.log(`Game ${code} ended - lobby phase set to ended`);
+          
           io.to(`game:${code}`).emit(GAME_EVENTS.GAME_OVER, {
             reason: status.gameOverReason,
             winner: status.winner
@@ -672,6 +810,154 @@ io.on('connection', (socket) => {
       console.log(`Move made in game ${code}: ${from} -> ${to}`);
     } catch (error) {
       console.error('Error making move:', error);
+      if (ack) ack({ success: false, error: error.message });
+    }
+  });
+
+  // Handle pawn promotion
+  socket.on(GAME_EVENTS.PAWN_PROMOTION, (data, ack) => {
+    try {
+      const { code, from, to, promotionPiece, playerOrientation } = data || {};
+      console.log('=== BACKEND PROMOTION DEBUG ===');
+      console.log('Promotion data:', { code, from, to, promotionPiece, playerOrientation });
+      
+      if (!code || !from || !to || promotionPiece === null || promotionPiece === undefined) {
+        console.log('Missing required fields for promotion');
+        if (ack) ack({ success: false, error: 'Missing required fields for promotion' });
+        return;
+      }
+
+      const lobby = lobbyService.getLobby(code);
+      if (!lobby) {
+        console.log('Game not found');
+        if (ack) ack({ success: false, error: 'Game not found' });
+        return;
+      }
+
+      // Check if game has ended
+      if (lobby.phase === 'ended') {
+        console.log('Game has ended, cannot make moves');
+        if (ack) ack({ success: false, error: 'Game has ended' });
+        return;
+      }
+
+      // Get chess engine for this game
+      const chessEngine = chessEngines.get(code);
+      if (!chessEngine) {
+        console.log('Chess engine not found');
+        if (ack) ack({ success: false, error: 'Chess engine not found' });
+        return;
+      }
+
+      // Validate promotion piece
+      console.log('Piece constants:', Piece);
+      console.log('Promotion piece received:', promotionPiece);
+      const validPromotionPieces = [Piece.QUEEN, Piece.ROOK, Piece.BISHOP, Piece.KNIGHT];
+      console.log('Valid promotion pieces:', validPromotionPieces);
+      if (!validPromotionPieces.includes(promotionPiece)) {
+        console.log('Invalid promotion piece:', promotionPiece);
+        if (ack) ack({ success: false, error: 'Invalid promotion piece' });
+        return;
+      }
+
+      // Make the move with promotion
+      const result = chessEngine.makeMove(from, to, playerOrientation, promotionPiece);
+      console.log('Promotion move result:', result);
+      
+      if (!result.success) {
+        console.log('Promotion move failed:', result.error);
+        if (ack) ack({ success: false, error: result.error });
+        return;
+      }
+
+      // Send game state to all players in the game room
+      const gameRoom = io.sockets.adapter.rooms.get(`game:${code}`);
+      if (gameRoom) {
+        for (const socketId of gameRoom) {
+          const playerSocket = io.sockets.sockets.get(socketId);
+          if (playerSocket) {
+            // Get player's orientation from lobby
+            const player = lobby.players.get(socketId);
+            const playerOrientation = getPlayerOrientation(lobby, player);
+            
+            // Send game state for this specific player's perspective
+            const gameState = chessEngine.getGameStateForPlayer(playerOrientation);
+            playerSocket.emit(GAME_EVENTS.GAME_STATE, gameState);
+          }
+        }
+      }
+
+      // Handle game status events (same as regular move)
+      if (result.gameStatus) {
+        const status = result.gameStatus;
+        
+        // Emit check events
+        for (const [team, checkResult] of Object.entries(status.inCheck)) {
+          if (checkResult.inCheck) {
+            io.to(`game:${code}`).emit(GAME_EVENTS.CHECK, {
+              team: parseInt(team),
+              attackingPiece: checkResult.attackingPiece,
+              kingSquare: checkResult.kingSquare
+            });
+          }
+        }
+        
+        // Emit checkmate events
+        for (const [team, checkmateResult] of Object.entries(status.inCheckmate)) {
+          if (checkmateResult.inCheckmate) {
+            io.to(`game:${code}`).emit(GAME_EVENTS.CHECKMATE, {
+              team: parseInt(team),
+              allAttackers: checkmateResult.allAttackers,
+              kingSquare: checkmateResult.kingSquare,
+              winner: status.winner,
+              loser: status.loser
+            });
+          }
+        }
+        
+        // Emit stalemate events
+        for (const [team, stalemateResult] of Object.entries(status.inStalemate)) {
+          if (stalemateResult.inStalemate) {
+            io.to(`game:${code}`).emit(GAME_EVENTS.STALEMATE, {
+              team: parseInt(team)
+            });
+          }
+        }
+        
+        // Emit game over event
+        if (status.gameOver) {
+          // Pause the timer when game ends
+          const timer = gameTimers.get(code);
+          if (timer && !timer.paused) {
+            timer.elapsed += Date.now() - timer.startTime;
+            timer.paused = true;
+            gameTimers.set(code, timer);
+            console.log(`Timer paused for game ${code} - game over: ${status.gameOverReason}`);
+          }
+          
+          // Set lobby phase to ended
+          lobby.phase = 'ended';
+          lobby.endedAt = Date.now();
+          console.log(`Game ${code} ended - lobby phase set to ended`);
+          
+          io.to(`game:${code}`).emit(GAME_EVENTS.GAME_OVER, {
+            reason: status.gameOverReason,
+            winner: status.winner
+          });
+        }
+      }
+
+      // Broadcast the move to all players
+      io.to(`game:${code}`).emit(GAME_EVENTS.MOVE_MADE, {
+        move: result.move,
+        gameState: result.gameState,
+        gameStatus: result.gameStatus
+      });
+
+      if (ack) ack({ success: true, move: result.move });
+      console.log(`Promotion move made in game ${code}: ${from} -> ${to} (${promotionPiece})`);
+    } catch (error) {
+      console.error('Error handling pawn promotion:', error);
       if (ack) ack({ success: false, error: error.message });
     }
   });
@@ -716,12 +1002,31 @@ io.on('connection', (socket) => {
       const { code } = data || {};
       if (!code) return;
 
-      const timer = gameTimers.get(code) || { elapsed: 0, paused: false };
-      timer.startTime = Date.now();
-      timer.paused = false;
-      gameTimers.set(code, timer);
-
-      console.log(`Timer started for lobby ${code}`);
+      const existingTimer = gameTimers.get(code);
+      
+      // Only start timer if it doesn't exist or is paused
+      if (!existingTimer) {
+        // Create new timer
+        gameTimers.set(code, { elapsed: 0, paused: false, startTime: Date.now() });
+        console.log(`Timer created and started for lobby ${code}`);
+      } else if (existingTimer.paused) {
+        // Resume existing timer
+        existingTimer.startTime = Date.now();
+        existingTimer.paused = false;
+        gameTimers.set(code, existingTimer);
+        console.log(`Timer resumed for lobby ${code}`);
+      } else {
+        // Timer is already running, don't reset it
+        console.log(`Timer already running for lobby ${code}, ignoring start request`);
+      }
+      
+      // Send immediate timer update to confirm it's working
+      const timer = gameTimers.get(code);
+      if (timer && !timer.paused) {
+        const currentElapsed = Math.floor((timer.elapsed + (Date.now() - timer.startTime)) / 1000);
+        io.to(`game:${code}`).emit(TIMER_EVENTS.UPDATE, { code, elapsed: currentElapsed });
+        console.log(`Sent immediate timer update: ${currentElapsed}s for game ${code}`);
+      }
     } catch (error) {
       console.error('Error starting timer:', error);
     }
@@ -771,7 +1076,9 @@ io.on('connection', (socket) => {
 
 // Helper function to emit lobby state
 function emitLobbyState(io, code) {
-  const lobbyPublic = lobbyService.getPublicView(code);
+  // Get stored orientations if game has started
+  const orientations = playerOrientations.get(code) || null;
+  const lobbyPublic = lobbyService.getPublicView(code, orientations);
   if (lobbyPublic) {
     io.to(code).emit(LOBBY_EVENTS.STATE, {
       lobbyPublic,
@@ -780,28 +1087,38 @@ function emitLobbyState(io, code) {
   }
 }
 
+// Store original player orientations when game starts
+const playerOrientations = new Map(); // gameCode -> Map(playerId -> orientation)
+
 // Helper function to get player orientation based on lobby order
 function getPlayerOrientation(lobby, player) {
   if (!lobby || !player) return null;
   
-  const players = Array.from(lobby.players.values()).filter(p => p.connected);
+  // If game has started, use stored orientations
+  if (lobby.phase === 'in_game' && playerOrientations.has(lobby.code)) {
+    const orientations = playerOrientations.get(lobby.code);
+    if (orientations.has(player.playerId)) {
+      return orientations.get(player.playerId);
+    }
+  }
+  
+  // For new games or if orientation not stored, assign based on join order
+  const players = Array.from(lobby.players.values())
+    .filter(p => p.connected)
+    .sort((a, b) => a.joinedAt - b.joinedAt);
+  
   const playerIndex = players.findIndex(p => p.playerId === player.playerId);
   
-  // For 2-player games: first player is BOTTOM, second is TOP
-  if (players.length === 2) {
-    return playerIndex === 0 ? 2 : 0; // BOTTOM : TOP
-  }
-  
-  // For 3-player games: White=BOTTOM, Black=TOP, Red=RIGHT (no LEFT)
-  if (players.length === 3) {
-    const orientations = [2, 0, 1]; // BOTTOM, TOP, RIGHT (matches White, Black, Red)
-    return orientations[playerIndex] || 2; // Default to BOTTOM
-  }
-  
-  // For 4-player games: White=BOTTOM, Black=TOP, Red=RIGHT, Blue=LEFT
-  if (players.length === 4) {
-    const orientations = [2, 0, 1, 3]; // BOTTOM, TOP, RIGHT, LEFT (matches White, Black, Red, Blue)
-    return orientations[playerIndex] || 2; // Default to BOTTOM
+  // Use stable orientation assignment based on join order
+  // This matches the color assignment in lobby service
+  if (playerIndex === 0) {
+    return 2; // First player (host) always gets BOTTOM (White)
+  } else if (playerIndex === 1) {
+    return 0; // Second player always gets TOP (Black)
+  } else if (playerIndex === 2) {
+    return 1; // Third player always gets RIGHT (Red)
+  } else if (playerIndex === 3) {
+    return 3; // Fourth player always gets LEFT (Blue)
   }
   
   return 2; // Default to BOTTOM
@@ -830,6 +1147,24 @@ function handlePlayerDisconnection(socketId) {
         
         io.to(code).emit(LOBBY_EVENTS.PLAYER_LEFT, { playerPublic });
         emitLobbyState(io, code);
+        
+        // Check if lobby is now empty and clean up orientations
+        const remainingPlayers = Array.from(lobby.players.values()).filter(p => p.connected);
+        if (remainingPlayers.length === 0) {
+          console.log(`Lobby ${code} is now empty, cleaning up orientations`);
+          playerOrientations.delete(code);
+        }
+        
+        // If game was in progress and now has no players, pause the timer
+        if (lobby.phase === 'in_game' && remainingPlayers.length === 0) {
+          const timer = gameTimers.get(code);
+          if (timer && !timer.paused) {
+            timer.elapsed += Date.now() - timer.startTime;
+            timer.paused = true;
+            gameTimers.set(code, timer);
+            console.log(`Timer paused for game ${code} - all players disconnected`);
+          }
+        }
       }
       
       break; // Player can only be in one lobby
@@ -852,6 +1187,7 @@ function sendTimerUpdates() {
     if (!timer.paused) {
       const currentElapsed = Math.floor((timer.elapsed + (now - timer.startTime)) / 1000);
       io.to(`game:${code}`).emit(TIMER_EVENTS.UPDATE, { code, elapsed: currentElapsed });
+      console.log(`Broadcasting timer update: ${currentElapsed}s for game ${code}`);
     }
   }
   

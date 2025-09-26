@@ -33,6 +33,7 @@ export const GAME_EVENTS = {
   RESUME: 'game:resume',
   QUIT: 'game:quit',
   MAKE_MOVE: 'game:makeMove',
+  PAWN_PROMOTION: 'game:pawnPromotion',
 
   // Server to Client
   JOINED: 'game:joined',
@@ -43,6 +44,7 @@ export const GAME_EVENTS = {
   ERROR: 'game:error',
   MOVE_MADE: 'game:moveMade',
   GAME_STATE: 'game:gameState',
+  PROMOTION_REQUIRED: 'game:promotionRequired',
   
   // Game status events
   CHECK: 'game:check',
@@ -132,6 +134,10 @@ export const EVENT_SCHEMAS = {
   },
   [GAME_EVENTS.MAKE_MOVE]: {
     required: ['code', 'from', 'to'],
+    optional: ['playerOrientation']
+  },
+  [GAME_EVENTS.PAWN_PROMOTION]: {
+    required: ['code', 'from', 'to', 'promotionPiece'],
     optional: ['playerOrientation']
   },
   [TIMER_EVENTS.START]: {

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import './4player.css'
 import * as chess from '../../../chess.js'
-import { makeMove, listenGame } from '../../../sockets/game.js'
+import { makeMove, makePromotionMove, listenGame } from '../../../sockets/game.js'
 import { useSound } from '../../../contexts/SoundContext'
+import PromotionModal from '../PromotionModal.jsx'
 
 const DURATION = 3000.0
 const clamp = (n, min, max) => Math.min(Math.max(n, min), max)
@@ -21,6 +22,7 @@ export default function FourPlayerBoard({
 
   const [selected, setSelected] = useState(null)
   const [pieces, setPieces] = useState([])
+  const [promotionData, setPromotionData] = useState(null) // { from, to, playerTeam }
 
   // Create square lookup and grid
   let square_lookup = {}
@@ -396,6 +398,15 @@ export default function FourPlayerBoard({
               console.log('Move successful:', response)
               soundActions.playMoveSound()
             },
+            onPromotionRequired: (data) => {
+              console.log('Promotion required:', data)
+              // Show promotion modal
+              setPromotionData({
+                from: data.from,
+                to: data.to,
+                playerTeam: selected.team
+              })
+            },
             onError: (error) => {
               console.error('Move failed:', error)
             }
@@ -413,5 +424,37 @@ export default function FourPlayerBoard({
         }}
       />
     })}
+
+    {/* Promotion Modal */}
+    {promotionData && (
+      <PromotionModal
+        isOpen={!!promotionData}
+        onClose={() => setPromotionData(null)}
+        onSelect={(promotionPiece) => {
+          console.log('Promotion piece selected:', promotionPiece)
+          // Send promotion move to backend
+          if (gameCode) {
+            makePromotionMove({
+              code: gameCode,
+              from: promotionData.from,
+              to: promotionData.to,
+              promotionPiece: promotionPiece,
+              playerOrientation: playerOrientation
+            }, {
+              onMoveMade: (response) => {
+                console.log('Promotion move successful:', response)
+                soundActions.playMoveSound()
+                setPromotionData(null)
+              },
+              onError: (error) => {
+                console.error('Promotion move failed:', error)
+                setPromotionData(null)
+              }
+            })
+          }
+        }}
+        playerTeam={promotionData.playerTeam}
+      />
+    )}
   </div>
 } 
