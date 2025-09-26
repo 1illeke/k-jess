@@ -696,11 +696,19 @@ io.on('connection', (socket) => {
         chessEngines.set(code, chessEngine);
       }
 
-      console.log('Player orientation:', playerOrientation);
+      // Derive authoritative orientation from server-side mapping
+      const player = lobby.players.get(socket.id);
+      if (!player) {
+        console.log('Unauthorized move: player not found in lobby');
+        if (ack) ack({ success: false, error: 'Unauthorized' });
+        return;
+      }
+      const serverOrientation = getPlayerOrientation(lobby, player);
+      console.log('Derived player orientation:', serverOrientation);
       console.log('Engine type:', chessEngine.constructor.name);
 
       // Check if move requires promotion
-      if (chessEngine.requiresPromotion(from, to, playerOrientation)) {
+      if (chessEngine.requiresPromotion(from, to, serverOrientation)) {
         console.log('Move requires promotion');
         if (ack) ack({ 
           success: false, 
@@ -713,7 +721,7 @@ io.on('connection', (socket) => {
       }
 
       // Make the move
-      const result = chessEngine.makeMove(from, to, playerOrientation);
+      const result = chessEngine.makeMove(from, to, serverOrientation);
       console.log('Move result:', result);
       
       if (!result.success) {
@@ -860,8 +868,17 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // Make the move with promotion
-      const result = chessEngine.makeMove(from, to, playerOrientation, promotionPiece);
+      // Derive authoritative orientation from server-side mapping
+      const player = lobby.players.get(socket.id);
+      if (!player) {
+        console.log('Unauthorized promotion: player not found in lobby');
+        if (ack) ack({ success: false, error: 'Unauthorized' });
+        return;
+      }
+      const serverOrientation = getPlayerOrientation(lobby, player);
+
+      // Make the move with promotion using server-derived orientation
+      const result = chessEngine.makeMove(from, to, serverOrientation, promotionPiece);
       console.log('Promotion move result:', result);
       
       if (!result.success) {
