@@ -149,11 +149,17 @@ function GamePage() {
         console.log('Game over event received:', gameOverData);
         
         // Determine if current player won
-        const currentPlayerOrientation = getPlayerOrientation();
-        const playerWon = gameOverData.winner && gameOverData.winner.includes(currentPlayerOrientation);
+        const currentPlayerOrientation = gameOverData.playerOrientation ?? getPlayerOrientation();
+        let playerWon = false;
+        if (Array.isArray(gameOverData.winner)) {
+          playerWon = gameOverData.winner.includes(currentPlayerOrientation);
+        } else if (typeof gameOverData.loser === 'number') {
+          playerWon = gameOverData.loser !== currentPlayerOrientation;
+        }
         
         console.log('Current player orientation:', currentPlayerOrientation);
         console.log('Winner orientations:', gameOverData.winner);
+        console.log('Loser orientation:', gameOverData.loser);
         console.log('Player won:', playerWon);
         
         handleGameOver({

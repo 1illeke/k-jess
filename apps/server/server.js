@@ -196,12 +196,31 @@ function finalizeGameAndCleanup({ code, lobby, status }) {
       lobby.endedAt = Date.now();
     }
 
-    // Emit a final GAME_OVER to ensure clients react
+    // Emit a final GAME_OVER to each player with their orientation
     if (status) {
-      io.to(`game:${code}`).emit(GAME_EVENTS.GAME_OVER, {
-        reason: status.gameOverReason,
-        winner: status.winner
-      });
+      const gameRoom = io.sockets.adapter.rooms.get(`game:${code}`);
+      if (gameRoom) {
+        for (const socketId of gameRoom) {
+          const playerSocket = io.sockets.sockets.get(socketId);
+          if (playerSocket) {
+            const player = lobby?.players.get(socketId);
+            const playerOrientation = player ? getPlayerOrientation(lobby, player) : null;
+            playerSocket.emit(GAME_EVENTS.GAME_OVER, {
+              reason: status.gameOverReason,
+              winner: status.winner,
+              loser: status.loser,
+              playerOrientation
+            });
+          }
+        }
+      } else {
+        // Fallback broadcast without per-player orientation
+        io.to(`game:${code}`).emit(GAME_EVENTS.GAME_OVER, {
+          reason: status.gameOverReason,
+          winner: status.winner,
+          loser: status.loser
+        });
+      }
     }
 
     // Clear chess engine resources

@@ -757,6 +757,11 @@ export class KISSEngine {
     if (materialCheck.insufficient) {
       status.gameOver = true
       status.gameOverReason = materialCheck.reason
+      // If only one team remains, set that team as winner(s)
+      if (materialCheck.reason === 'only_one_team_remaining') {
+        const activeTeams = [...new Set(this.pieces.filter(p => !p.dead).map(p => p.team))]
+        status.winner = activeTeams
+      }
       return status
     }
     
