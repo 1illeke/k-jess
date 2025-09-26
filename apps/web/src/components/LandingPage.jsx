@@ -109,6 +109,17 @@ function LandingPage() {
       case 'Changelog':
         return (
           <div>
+            <h4>Version 0.1.28</h4>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added scoring system</li>
+              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added improved promotion</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* fixed the colour name shuffle</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* colour issue fix</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* black can promote again on 2 player</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* gameover actually ends the game now, fixed winner/loser logic for 2 player</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* fixed timer issues</li>
+              <li style={{ color: '#666666', marginBottom: '8px' }}>* Various fixes</li>
+            </ul>
             <h4>Version 0.1.25</h4>
             <ul style={{ listStyle: 'none', padding: 0 }}>
               <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added SFX for movment</li>
@@ -123,23 +134,6 @@ function LandingPage() {
             <ul style={{ listStyle: 'none', padding: 0 }}>
               <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added SFX for movment</li>
               <li style={{ color: '#666666', marginBottom: '8px' }}>* Various fixes</li>
-            </ul>
-            <h4>Version 0.1.19</h4>
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added clear piece images</li>
-              <li style={{ color: '#666666', marginBottom: '8px' }}>* Improved cooldown animation smoothness</li>
-              <li style={{ color: '#666666', marginBottom: '8px' }}>* Various fixes</li>
-            </ul>
-            <h4>Version 0.1.15</h4>
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              <li style={{ color: '#666666', marginBottom: '8px' }}>* Code formatting improvements</li>
-              <li style={{ color: '#666666', marginBottom: '8px' }}>* Various fixes</li>
-            </ul>
-            <h4>Version 0.1.14</h4>
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              <li style={{ color: '#666666', marginBottom: '8px' }}>* Fixed audio issues</li>
-              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Added visual cooldowns for enemy players</li>
-              <li style={{ color: '#51cf66', marginBottom: '8px' }}>+ Uploaded semi working project for testing purposes</li>
             </ul>
           </div>
         )
