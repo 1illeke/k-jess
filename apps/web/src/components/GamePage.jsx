@@ -6,6 +6,7 @@ import { gameSocket, chatSocket, timerSocket } from '../sockets'
 import socket from '../sockets/socket.js'
 import { LOBBY_EVENTS } from '../../constants/socket-events.js'
 import { useSound } from '../contexts/SoundContext'
+import { useMusic } from '../contexts/MusicContext.jsx'
 
 function GamePage() {
   const location = useLocation()
@@ -16,6 +17,7 @@ function GamePage() {
   const lobbyPublic = location.state?.lobbyPublic || location.state?.lobbyPlayers || []
   const gameSettings = location.state?.gameSettings || {}
   const { isMuted, actions: soundActions } = useSound()
+  const music = useMusic()
 
 
   const [gameTime, setGameTime] = useState(0)
@@ -39,6 +41,7 @@ function GamePage() {
   })
   const [playerOrientation, setPlayerOrientation] = useState(null) // Store server-provided orientation
   const chatMessagesRef = useRef(null)
+  const chatInputRef = useRef(null)
 
   // Get stable player ID (unique per tab)
   const getPlayerId = () => {
@@ -149,11 +152,17 @@ function GamePage() {
         console.log('Game over event received:', gameOverData);
         
         // Determine if current player won
-        const currentPlayerOrientation = getPlayerOrientation();
-        const playerWon = gameOverData.winner && gameOverData.winner.includes(currentPlayerOrientation);
+        const currentPlayerOrientation = gameOverData.playerOrientation ?? getPlayerOrientation();
+        let playerWon = false;
+        if (Array.isArray(gameOverData.winner)) {
+          playerWon = gameOverData.winner.includes(currentPlayerOrientation);
+        } else if (typeof gameOverData.loser === 'number') {
+          playerWon = gameOverData.loser !== currentPlayerOrientation;
+        }
         
         console.log('Current player orientation:', currentPlayerOrientation);
         console.log('Winner orientations:', gameOverData.winner);
+        console.log('Loser orientation:', gameOverData.loser);
         console.log('Player won:', playerWon);
         
         handleGameOver({
@@ -185,13 +194,10 @@ function GamePage() {
       }, (response) => {
         if (!response?.success) {
           console.error('Failed to join lobby:', response?.error);
-          // Navigate back to home if lobby doesn't exist
-          navigate('/', {
-            state: {
-              error: 'Lobby not found or expired',
-              playerName
-            }
-          });
+          // If the game/lobby no longer exists, show ended modal instead of hard navigating
+          setGameOverData({ reason: 'ended' });
+          setModalType('game_over');
+          setShowModal(true);
         }
       });
 
@@ -218,6 +224,13 @@ function GamePage() {
             color: player.color || 'White' // Use server-assigned color
           }));
           setGamePlayers(players);
+        }
+
+        // If lobby phase is ended, present ended modal
+        if (lobbyPublic?.phase === 'ended') {
+          setGameOverData({ reason: 'ended' });
+          setModalType('game_over');
+          setShowModal(true);
         }
 
         // Don't automatically start countdown here - let the lobby start event handle it
@@ -248,6 +261,43 @@ function GamePage() {
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight
     }
   }, [chatMessages])
+
+  // Global hotkeys: Enter to focus/send chat, J/K/L for music prev/play/next
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      // Ignore when focused on inputs/textareas to not interfere with typing
+      const tag = (e.target && e.target.tagName) || ''
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA'
+
+      // Chat Enter: focus or submit
+      if (e.key === 'Enter') {
+        if (document.activeElement === chatInputRef.current) {
+          // Submit message
+          e.preventDefault()
+          if (newMessage.trim()) {
+            handleSendMessage({ preventDefault: () => {} })
+          }
+        } else if (!isTyping) {
+          e.preventDefault()
+          chatInputRef.current?.focus()
+        }
+        return
+      }
+
+      // Music controls (J/K/L) when not typing in an input
+      if (!isTyping) {
+        if (e.key === 'j' || e.key === 'J') {
+          music?.actions?.previousTrack?.()
+        } else if (e.key === 'k' || e.key === 'K') {
+          music?.actions?.togglePlay?.()
+        } else if (e.key === 'l' || e.key === 'L') {
+          music?.actions?.nextTrack?.()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [newMessage, music])
 
   const handlePause = () => {
     if (!isPaused) {
@@ -505,6 +555,7 @@ function GamePage() {
                 placeholder="Type message..."
                 className="chat-input"
                 maxLength={100}
+                ref={chatInputRef}
               />
             </form>
           </div>
@@ -618,6 +669,7 @@ function GamePage() {
                   {gameOverData?.reason === 'stalemate' && 'by Stalemate'}
                   {gameOverData?.reason === 'insufficient_material' && 'by Insufficient Material'}
                   {gameOverData?.reason === 'only_one_team_remaining' && 'Last Player Standing'}
+                  {gameOverData?.reason === 'ended' && 'This game has ended'}
                 </p>
               </div>
             )}

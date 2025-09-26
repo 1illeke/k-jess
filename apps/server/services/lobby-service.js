@@ -85,6 +85,11 @@ export class LobbyService {
       // Don't update name for rejoining players - keep original name
       lobby.players.set(socketId, existingPlayer);
       
+      // If the rejoining player is the host, update hostId to new socket
+      if (existingPlayer.playerId === lobby.hostPlayerId) {
+        lobby.hostId = socketId;
+      }
+      
       // Cancel cleanup timer since lobby is no longer empty
       if (lobby.cleanupTimer) {
         clearTimeout(lobby.cleanupTimer);
@@ -129,10 +134,18 @@ export class LobbyService {
     const player = lobby.players.get(socketId);
     if (!player) return false;
 
+    // Mark player disconnected instead of removing immediately
+    player.connected = false;
+    player.disconnectedAt = Date.now();
+    // Keep entry with the same player object but key by latest socketId only
+    // Remove old key and reinsert under the same key to ensure map integrity
     lobby.players.delete(socketId);
+    lobby.players.set(socketId, player);
 
     // If lobby is empty, schedule cleanup with a delay to allow for reconnection
-    if (lobby.players.size === 0) {
+    // If all players are disconnected, schedule cleanup with a delay to allow reconnection
+    const connectedCount = Array.from(lobby.players.values()).filter(p => p.connected).length;
+    if (connectedCount === 0) {
       // Clear any existing cleanup timer for this lobby
       if (lobby.cleanupTimer) {
         clearTimeout(lobby.cleanupTimer);
@@ -148,11 +161,15 @@ export class LobbyService {
       }, 30000); // 30 seconds delay
       
     } else if (lobby.hostId === socketId) {
-      // Transfer host to another player
-      const newHost = Array.from(lobby.players.values()).find(p => p.connected);
-      if (newHost) {
-        lobby.hostId = newHost.socketId;
-        lobby.hostPlayerId = newHost.playerId;
+      // Keep host by playerId stable; reassign hostId when host reconnects
+      const hostStillPresent = Array.from(lobby.players.values()).some(p => p.playerId === lobby.hostPlayerId);
+      if (!hostStillPresent) {
+        // Fallback: choose first connected player as host and persist
+        const newHost = Array.from(lobby.players.values()).find(p => p.connected);
+        if (newHost) {
+          lobby.hostId = newHost.socketId;
+          lobby.hostPlayerId = newHost.playerId;
+        }
       }
     }
 

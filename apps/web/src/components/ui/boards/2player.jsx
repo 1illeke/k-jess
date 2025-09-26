@@ -226,7 +226,8 @@ export default function TwoPlayerBoard({
 
 				// Pass game over data to parent component
 				if (onGameOver) {
-					const isPlayerWin = data.loser !== playerOrientation
+					const isPlayerWin = (Array.isArray(data.winner) && data.winner.includes(playerOrientation))
+						|| (typeof data.loser === 'number' && data.loser !== playerOrientation)
 					onGameOver({
 						type: 'checkmate',
 						winner: isPlayerWin,
@@ -249,18 +250,13 @@ export default function TwoPlayerBoard({
 				console.log('Game over:', data)
 
 				if (onGameOver) {
-					let winner = false // Draw by default
-					if (data.reason === 'checkmate') {
-						winner = data.loser !== playerOrientation
-					} else if (data.reason === 'only_one_team_remaining') {
-						winner = data.winner && data.winner.includes(playerOrientation)
+					let playerWon = false // Draw by default
+					if (Array.isArray(data.winner)) {
+						playerWon = data.winner.includes(playerOrientation)
+					} else if (typeof data.loser === 'number') {
+						playerWon = data.loser !== playerOrientation
 					}
-
-					onGameOver({
-						type: 'game_over',
-						winner: winner,
-						reason: data.reason
-					})
+					onGameOver({ type: 'game_over', winner: playerWon, reason: data.reason })
 				}
 			}
 		})
